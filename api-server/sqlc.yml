@@ -1,0 +1,10 @@
+# TODO: configure/setup migrations
+version: "2"
+sql:
+  - engine: "sqlite"
+    queries: "query.sql"
+    schema: "schema.sql"
+    gen:
+      go:
+        package: "ride_sharing_api"
+        out: "ride_sharing_api"
