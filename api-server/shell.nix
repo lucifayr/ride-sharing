@@ -6,5 +6,6 @@ pkgs.mkShell {
     sqlc
     sqlite
     go
+    nodePackages.sql-formatter
   ];
 }

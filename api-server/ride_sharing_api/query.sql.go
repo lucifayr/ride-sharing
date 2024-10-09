@@ -9,6 +9,27 @@ import (
 	"context"
 )
 
+const usersCreate = `-- name: UsersCreate :one
+INSERT INTO
+    users (name, email)
+VALUES
+    (?, ?) RETURNING id, name, email
+`
+
+type UsersCreateParams struct {
+	Name  string
+	Email string
+}
+
+// See sqlc docs for more information:
+// https://docs.sqlc.dev/en/latest/tutorials/getting-started-sqlite.html#schema-and-queries
+func (q *Queries) UsersCreate(ctx context.Context, arg UsersCreateParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, usersCreate, arg.Name, arg.Email)
+	var i User
+	err := row.Scan(&i.ID, &i.Name, &i.Email)
+	return i, err
+}
+
 const usersGetById = `-- name: UsersGetById :one
 SELECT
     id, name, email
@@ -18,8 +39,6 @@ WHERE
     id = ?
 `
 
-// See sqlc docs for more information:
-// https://docs.sqlc.dev/en/latest/tutorials/getting-started-sqlite.html#schema-and-queries
 func (q *Queries) UsersGetById(ctx context.Context, id int64) (User, error) {
 	row := q.db.QueryRowContext(ctx, usersGetById, id)
 	var i User
