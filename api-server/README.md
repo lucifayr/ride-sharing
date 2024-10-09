@@ -24,11 +24,13 @@ go run ride-sharing-api/main.go
 
 ### SQL
 
-To add queries modify `query.sql` and run `sqlc generate`.
+- To add queries modify files in `db/queries/{table-name}.sql` and run `sqlc
+  generate`.
+- To update the database schema modify files in
+  `db/migrations/{table-name}.[up/down].sql` and run `sqlc generate`.
 
 #### formatting
 
 ```sh
-sql-formatter --config .sql-formatter.json --fix query.sql
-sql-formatter --config .sql-formatter.json --fix schema.sql
+sh ./sql-fmt.sh
 ```
