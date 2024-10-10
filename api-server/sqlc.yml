@@ -6,4 +6,4 @@ sql:
     gen:
       go:
         package: "ride_sharing_api"
-        out: "ride_sharing_api"
+        out: "app/sqlc"
