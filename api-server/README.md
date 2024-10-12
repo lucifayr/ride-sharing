@@ -16,10 +16,10 @@ Or install the following dependencies manually.
 - `sql-formatter`
 
 
-### running
+### running (dev)
 
 ```sh
-go run ride-sharing-api/main.go
+go run app/main.go
 ```
 
 ### SQL
@@ -32,5 +32,11 @@ go run ride-sharing-api/main.go
 #### formatting
 
 ```sh
-sh ./sql-fmt.sh
+go run app/cli/main.go sql fmt
+```
+
+##### running migrations
+
+```sh
+go run app/cli/main.go migrations {up|down}
 ```

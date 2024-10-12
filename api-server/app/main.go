@@ -2,21 +2,18 @@ package main
 
 import (
 	"database/sql"
-	"embed"
-	"errors"
 	"log"
-	"os"
+
+	embeddings "ride_sharing_api"
+	utils "ride_sharing_api/app/database"
+	migrations "ride_sharing_api/app/database/migrations"
 
 	_ "github.com/mattn/go-sqlite3"
-	migrations "ride_sharing_api/app/database"
 )
-
-//go:embed db/migrations/*
-var dbMigrations embed.FS
 
 func main() {
 	dbFile := "./database.db"
-	err := createDbFileIfNotExists(dbFile)
+	err := utils.CreateDbFileIfNotExists(dbFile)
 	if err != nil {
 		log.Fatalln("Failed to create database file.", dbFile, err)
 	}
@@ -33,21 +30,8 @@ func initDb(dbFile string) (*sql.DB, error) {
 		return nil, err
 	}
 
-	m, err := migrations.FromEmbedFs(dbMigrations, "db/migrations")
+	m := migrations.FromEmbedFs(embeddings.DbMigrations, "db/migrations")
 	m.Up(db)
 
 	return db, nil
-}
-
-func createDbFileIfNotExists(path string) error {
-	_, err := os.Stat(path)
-
-	if !errors.Is(err, os.ErrNotExist) {
-		return nil
-	}
-
-	f, err := os.Create(path)
-	f.Close()
-
-	return err
 }

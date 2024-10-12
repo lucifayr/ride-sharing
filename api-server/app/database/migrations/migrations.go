@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log"
 	"path"
-	assert "ride_sharing_api/app"
+	assert "ride_sharing_api/app/utils"
 	"slices"
 	"sort"
 	"strings"
@@ -27,7 +27,7 @@ type Migration struct {
 	sql  map[string]string
 }
 
-func FromEmbedFs(fs embed.FS, root string) (Migrations, error) {
+func FromEmbedFs(fs embed.FS, root string) Migrations {
 	dir, err := fs.ReadDir(root)
 	if err != nil {
 		log.Fatalln("Failed to read migrations from root directory.", "root", root)
@@ -108,7 +108,7 @@ func FromEmbedFs(fs embed.FS, root string) (Migrations, error) {
 		return a.name > b.name
 	})
 
-	return Migrations{migrationSourceTexts: migrations}, nil
+	return Migrations{migrationSourceTexts: migrations}
 }
 
 func (migrations *Migrations) Up(db *sql.DB) {
@@ -130,7 +130,7 @@ func (migrations *Migrations) Up(db *sql.DB) {
 	}
 }
 
-func (migrations *Migrations) Down(db *sql.DB, runRange ...int) {
+func (migrations *Migrations) Down(db *sql.DB) {
 	for _, mig := range migrations.migrationSourceTexts {
 		sql := mig.sql[MigrationKindDown]
 
