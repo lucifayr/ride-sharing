@@ -9,10 +9,11 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	embeddings "ride_sharing_api"
-	utils "ride_sharing_api/app/database"
 	"ride_sharing_api/app/database/migrations"
+	utils "ride_sharing_api/app/utils"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -34,6 +35,12 @@ var commands = Command{
 				"down": {
 					exec: func(_cmd Command, _args []string) {
 						runMigrationsDown()
+					},
+				},
+				"create": {
+					exec: func(_cmd Command, args []string) {
+						flags := parseCreateMigrationFlags(args)
+						createMigration(flags)
 					},
 				},
 			},
@@ -95,6 +102,50 @@ func fmtSqlFiles() {
 
 		return nil
 	})
+}
+
+func createMigration(flags map[string]any) {
+	prefix := time.Now().Local().Format(time.DateTime)
+	// Replace space in date time string of format "2006-01-02 15:04:05"
+	prefix = strings.Replace(prefix, " ", "_", 1)
+	// Replace ':' in date time string of format "2006-01-02 15:04:05"
+	prefix = strings.Replace(prefix, ":", "-", 2)
+
+	migName := *flags["name"].(*string)
+	name := fmt.Sprintf("%s_%s", prefix, migName)
+
+	for _, suffix := range migrations.FileSuffixes() {
+		path := fmt.Sprintf("./db/migrations/%s.%s", name, suffix)
+		if utils.FileExists(path) {
+			log.Fatalln("Migration already exists", "path", path)
+		}
+
+		err := os.WriteFile(path, []byte{}, 0644)
+		if err != nil {
+			log.Fatalln("Failed to write migrations file.", "path", path, "error", err)
+		}
+
+		fmt.Println("-", path)
+	}
+}
+
+func parseCreateMigrationFlags(args []string) map[string]any {
+	idx := utils.IdxOf(args, func(arg string) bool {
+		return arg == "--name" || arg == "-n"
+	})
+
+	if idx == -1 {
+		log.Fatalln("Missing required parameter	`--name`. Provided it with `--name <value>`.")
+	}
+
+	name, ok := utils.SliceGet(args, idx+1)
+	if !ok {
+		log.Fatalln("Missing value for required parameter `--name`. Provided it with `--name <value>`.")
+	}
+
+	return map[string]any{
+		"name": name,
+	}
 }
 
 func setupDb() *sql.DB {

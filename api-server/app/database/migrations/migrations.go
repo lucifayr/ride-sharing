@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log"
 	"path"
-	assert "ride_sharing_api/app/utils"
+	assert "ride_sharing_api/app/assert"
 	"slices"
 	"sort"
 	"strings"
@@ -25,6 +25,14 @@ type Migrations struct {
 type Migration struct {
 	name string
 	sql  map[string]string
+}
+
+func FileSuffixes() []string {
+	return []string{
+		fmt.Sprintf("%s.sql", MigrationKindUp),
+		fmt.Sprintf("%s.sql", MigrationKindDown),
+		fmt.Sprintf("%s.sql", MigrationKindValidate),
+	}
 }
 
 func FromEmbedFs(fs embed.FS, root string) Migrations {
