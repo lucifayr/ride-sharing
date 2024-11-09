@@ -2,7 +2,7 @@
 // versions:
 //   sqlc v1.27.0
 
-package ride_sharing_api
+package sqlc
 
 import (
 	"context"

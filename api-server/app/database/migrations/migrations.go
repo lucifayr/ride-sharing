@@ -113,7 +113,7 @@ func FromEmbedFs(fs embed.FS, root string) Migrations {
 		a := migrations[i]
 		b := migrations[j]
 
-		return a.name > b.name
+		return a.name < b.name
 	})
 
 	return Migrations{migrationSourceTexts: migrations}
@@ -139,7 +139,9 @@ func (migrations *Migrations) Up(db simulator.DB) {
 }
 
 func (migrations *Migrations) Down(db simulator.DB) {
-	for _, mig := range migrations.migrationSourceTexts {
+	for idx := range migrations.migrationSourceTexts {
+		mig := migrations.migrationSourceTexts[len(migrations.migrationSourceTexts)-(idx+1)]
+
 		sql := mig.sql[MigrationKindDown]
 
 		log.Printf("Running migration [%s] : %s\n", MigrationKindDown, mig.name)

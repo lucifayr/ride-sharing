@@ -4,7 +4,11 @@ import (
 	"errors"
 	"os"
 	"ride_sharing_api/app/simulator"
+
+	"github.com/go-playground/validator/v10"
 )
+
+var Validate = validator.New(validator.WithRequiredStructEnabled())
 
 // Get the element at index	`idx` of `slice`. Returns `nil, false` if the index
 // is out of bounds.

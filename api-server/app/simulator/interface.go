@@ -1,9 +1,11 @@
 package simulator
 
 import (
+	"context"
 	"database/sql"
 	"io"
 	"io/fs"
+	"net/http"
 )
 
 // !EXPERIMENTAL!
@@ -26,12 +28,33 @@ type Simulator interface {
 	// driver-specific data source name, usually consisting of at least a
 	// database name and connection information.
 	SqlOpen(driverName string, dataSourceName string) (DB, error)
+
+	HttpGet(url string) (resp *http.Response, err error)
+
+	NewHttpServerMux() HTTPMux
+
+	// Randomizes the bytes in `b` with a cyptographically save algorithm. Modifies `b` inplace.
+	RandCrypto(b []byte)
+}
+
+type HTTPMux interface {
+	// HandleFunc registers the handler function for the given pattern. If the
+	// given pattern conflicts, with one that is already registered, HandleFunc
+	// panics.
+	HandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request))
+
+	ServeHTTP(w http.ResponseWriter, r *http.Request)
 }
 
 type DB interface {
 	// Exec executes a query without returning any rows. The args are for any
 	// placeholder parameters in the query.
 	Exec(query string, args ...any) (sql.Result, error)
+
+	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
+	PrepareContext(ctx context.Context, query string) (*sql.Stmt, error)
+	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
+	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
 }
 
 type File interface {

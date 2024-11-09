@@ -1,0 +1,54 @@
+# cloud.google.com/go/compute/metadata v0.3.0
+## explicit; go 1.19
+cloud.google.com/go/compute/metadata
+# github.com/gabriel-vasile/mimetype v1.4.3
+## explicit; go 1.20
+github.com/gabriel-vasile/mimetype
+github.com/gabriel-vasile/mimetype/internal/charset
+github.com/gabriel-vasile/mimetype/internal/json
+github.com/gabriel-vasile/mimetype/internal/magic
+# github.com/go-playground/locales v0.14.1
+## explicit; go 1.17
+github.com/go-playground/locales
+github.com/go-playground/locales/currency
+# github.com/go-playground/universal-translator v0.18.1
+## explicit; go 1.18
+github.com/go-playground/universal-translator
+# github.com/go-playground/validator/v10 v10.22.1
+## explicit; go 1.18
+github.com/go-playground/validator/v10
+# github.com/leodido/go-urn v1.4.0
+## explicit; go 1.18
+github.com/leodido/go-urn
+github.com/leodido/go-urn/scim/schema
+# github.com/mattn/go-sqlite3 v1.14.24
+## explicit; go 1.19
+github.com/mattn/go-sqlite3
+# golang.org/x/crypto v0.19.0
+## explicit; go 1.18
+golang.org/x/crypto/sha3
+# golang.org/x/net v0.21.0
+## explicit; go 1.18
+golang.org/x/net/html
+golang.org/x/net/html/atom
+# golang.org/x/oauth2 v0.24.0
+## explicit; go 1.18
+golang.org/x/oauth2
+golang.org/x/oauth2/authhandler
+golang.org/x/oauth2/google
+golang.org/x/oauth2/google/externalaccount
+golang.org/x/oauth2/google/internal/externalaccountauthorizeduser
+golang.org/x/oauth2/google/internal/impersonate
+golang.org/x/oauth2/google/internal/stsexchange
+golang.org/x/oauth2/internal
+golang.org/x/oauth2/jws
+golang.org/x/oauth2/jwt
+# golang.org/x/sys v0.17.0
+## explicit; go 1.18
+golang.org/x/sys/cpu
+# golang.org/x/text v0.14.0
+## explicit; go 1.18
+golang.org/x/text/internal/language
+golang.org/x/text/internal/language/compact
+golang.org/x/text/internal/tag
+golang.org/x/text/language

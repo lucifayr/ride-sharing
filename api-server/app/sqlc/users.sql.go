@@ -3,7 +3,7 @@
 //   sqlc v1.27.0
 // source: users.sql
 
-package ride_sharing_api
+package sqlc
 
 import (
 	"context"
@@ -11,57 +11,81 @@ import (
 
 const usersCreate = `-- name: UsersCreate :one
 INSERT INTO
-    users (name, email)
+    users (id, name, email, provider)
 VALUES
-    (?, ?) RETURNING id, name, email
+    (?, ?, ?, ?) RETURNING id, name, email, provider
 `
 
 type UsersCreateParams struct {
-	Name  string
-	Email string
+	ID       string
+	Name     string
+	Email    string
+	Provider string
 }
 
 // See sqlc docs for more information:
 // https://docs.sqlc.dev/en/latest/tutorials/getting-started-sqlite.html#schema-and-queries
 func (q *Queries) UsersCreate(ctx context.Context, arg UsersCreateParams) (User, error) {
-	row := q.db.QueryRowContext(ctx, usersCreate, arg.Name, arg.Email)
+	row := q.db.QueryRowContext(ctx, usersCreate,
+		arg.ID,
+		arg.Name,
+		arg.Email,
+		arg.Provider,
+	)
 	var i User
-	err := row.Scan(&i.ID, &i.Name, &i.Email)
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Email,
+		&i.Provider,
+	)
 	return i, err
 }
 
 const usersGetById = `-- name: UsersGetById :one
 SELECT
-    id, name, email
+    id, name, email, provider
 FROM
     users
 WHERE
     id = ?
 `
 
-func (q *Queries) UsersGetById(ctx context.Context, id int64) (User, error) {
+func (q *Queries) UsersGetById(ctx context.Context, id string) (User, error) {
 	row := q.db.QueryRowContext(ctx, usersGetById, id)
 	var i User
-	err := row.Scan(&i.ID, &i.Name, &i.Email)
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Email,
+		&i.Provider,
+	)
 	return i, err
 }
 
-const usersUpdateName = `-- name: UsersUpdateName :one
+const usersUpdateNameAndEmail = `-- name: UsersUpdateNameAndEmail :one
 UPDATE users
 SET
-    name = ?
+    name = ?,
+    email = ?
 WHERE
-    id = ? RETURNING id, name, email
+    id = ? RETURNING id, name, email, provider
 `
 
-type UsersUpdateNameParams struct {
-	Name string
-	ID   int64
+type UsersUpdateNameAndEmailParams struct {
+	Name  string
+	Email string
+	ID    string
 }
 
-func (q *Queries) UsersUpdateName(ctx context.Context, arg UsersUpdateNameParams) (User, error) {
-	row := q.db.QueryRowContext(ctx, usersUpdateName, arg.Name, arg.ID)
+func (q *Queries) UsersUpdateNameAndEmail(ctx context.Context, arg UsersUpdateNameAndEmailParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, usersUpdateNameAndEmail, arg.Name, arg.Email, arg.ID)
 	var i User
-	err := row.Scan(&i.ID, &i.Name, &i.Email)
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Email,
+		&i.Provider,
+	)
 	return i, err
 }

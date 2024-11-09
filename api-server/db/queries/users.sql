@@ -3,9 +3,9 @@
 --
 -- name: UsersCreate :one
 INSERT INTO
-    users (name, email)
+    users (id, name, email, provider)
 VALUES
-    (?, ?) RETURNING *;
+    (?, ?, ?, ?) RETURNING *;
 
 
 -- name: UsersGetById :one
@@ -17,9 +17,10 @@ WHERE
     id = ?;
 
 
--- name: UsersUpdateName :one
+-- name: UsersUpdateNameAndEmail :one
 UPDATE users
 SET
-    name = ?
+    name = ?,
+    email = ?
 WHERE
     id = ? RETURNING *;

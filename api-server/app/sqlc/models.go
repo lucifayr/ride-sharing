@@ -2,10 +2,11 @@
 // versions:
 //   sqlc v1.27.0
 
-package ride_sharing_api
+package sqlc
 
 type User struct {
-	ID    int64
-	Name  string
-	Email string
+	ID       string
+	Name     string
+	Email    string
+	Provider string
 }
