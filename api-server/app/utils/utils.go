@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"database/sql"
 	"errors"
 	"os"
 	"ride_sharing_api/app/simulator"
@@ -46,4 +47,8 @@ func CreateDbFileIfNotExists(path string) error {
 	f.Close()
 
 	return err
+}
+
+func SqlNullStr(str string) sql.NullString {
+	return sql.NullString{String: str, Valid: true}
 }

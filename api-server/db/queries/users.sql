@@ -24,3 +24,12 @@ SET
     email = ?
 WHERE
     id = ? RETURNING *;
+
+
+-- name: UsersSetTokens :exec
+UPDATE users
+SET
+    access_token = ?,
+    refresh_token = ?
+WHERE
+    id = ?;

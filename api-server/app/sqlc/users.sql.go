@@ -7,13 +7,14 @@ package sqlc
 
 import (
 	"context"
+	"database/sql"
 )
 
 const usersCreate = `-- name: UsersCreate :one
 INSERT INTO
     users (id, name, email, provider)
 VALUES
-    (?, ?, ?, ?) RETURNING id, name, email, provider
+    (?, ?, ?, ?) RETURNING id, name, email, provider, access_token, refresh_token
 `
 
 type UsersCreateParams struct {
@@ -38,13 +39,15 @@ func (q *Queries) UsersCreate(ctx context.Context, arg UsersCreateParams) (User,
 		&i.Name,
 		&i.Email,
 		&i.Provider,
+		&i.AccessToken,
+		&i.RefreshToken,
 	)
 	return i, err
 }
 
 const usersGetById = `-- name: UsersGetById :one
 SELECT
-    id, name, email, provider
+    id, name, email, provider, access_token, refresh_token
 FROM
     users
 WHERE
@@ -59,8 +62,30 @@ func (q *Queries) UsersGetById(ctx context.Context, id string) (User, error) {
 		&i.Name,
 		&i.Email,
 		&i.Provider,
+		&i.AccessToken,
+		&i.RefreshToken,
 	)
 	return i, err
+}
+
+const usersSetTokens = `-- name: UsersSetTokens :exec
+UPDATE users
+SET
+    access_token = ?,
+    refresh_token = ?
+WHERE
+    id = ?
+`
+
+type UsersSetTokensParams struct {
+	AccessToken  sql.NullString
+	RefreshToken sql.NullString
+	ID           string
+}
+
+func (q *Queries) UsersSetTokens(ctx context.Context, arg UsersSetTokensParams) error {
+	_, err := q.db.ExecContext(ctx, usersSetTokens, arg.AccessToken, arg.RefreshToken, arg.ID)
+	return err
 }
 
 const usersUpdateNameAndEmail = `-- name: UsersUpdateNameAndEmail :one
@@ -69,7 +94,7 @@ SET
     name = ?,
     email = ?
 WHERE
-    id = ? RETURNING id, name, email, provider
+    id = ? RETURNING id, name, email, provider, access_token, refresh_token
 `
 
 type UsersUpdateNameAndEmailParams struct {
@@ -86,6 +111,8 @@ func (q *Queries) UsersUpdateNameAndEmail(ctx context.Context, arg UsersUpdateNa
 		&i.Name,
 		&i.Email,
 		&i.Provider,
+		&i.AccessToken,
+		&i.RefreshToken,
 	)
 	return i, err
 }

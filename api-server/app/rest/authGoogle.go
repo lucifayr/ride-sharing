@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"ride_sharing_api/app/assert"
 	"ride_sharing_api/app/simulator"
 	"ride_sharing_api/app/sqlc"
 	"ride_sharing_api/app/utils"
@@ -42,76 +43,120 @@ var googleOauthConfig = &oauth2.Config{
 }
 
 func authHandlersGoogle(h simulator.HTTPMux) {
-	h.HandleFunc("/auth/google/login", oauthLoginGoogle)
-	h.HandleFunc("/auth/google/callback", oauthCallbackGoogle)
+	h.HandleFunc("/auth/google/login", withAllowedMethods(oauthLoginGoogle, "GET"))
+	h.HandleFunc("/auth/google/callback", withAllowedMethods(oauthCallbackGoogle, "GET"))
 }
 
 func oauthLoginGoogle(w http.ResponseWriter, r *http.Request) {
-	oauthState := generateStateOauthCookie()
+	oauthState := genRandBase64(16)
 	url := googleOauthConfig.AuthCodeURL(oauthState, oauth2.AccessTypeOffline, oauth2.ApprovalForce)
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
 func oauthCallbackGoogle(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+
 	profile, err := getUserProfileFromGoogle(r.FormValue("code"))
 	if err != nil {
-		// TODO
-		log.Fatalln(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if !*profile.VerifiedEmail {
-		// TODO
+		http.Error(w, "Google user has an unverified email address. This is not allowed.", http.StatusBadRequest)
 		return
 	}
 
 	user, err := state.queries.UsersGetById(context.Background(), *profile.Id)
 	if err == sql.ErrNoRows {
 		user, err = state.queries.UsersCreate(context.Background(), sqlc.UsersCreateParams{ID: *profile.Id, Name: *profile.Name, Email: *profile.Email, Provider: "google"})
-		// TODO:
+		if err != nil {
+			log.Println("Error: Failed to create user after Google authentication.", err.Error(), "user email:", *profile.Email)
+			http.Error(w, "Failed to create user after Google authentication.", http.StatusInternalServerError)
+			return
+		}
+
+		tokens := genAuthTokens(user.ID, user.Email)
+
+		args := sqlc.UsersSetTokensParams{ID: user.ID, AccessToken: sql.NullString{String: tokens.AccessToken}, RefreshToken: sql.NullString{String: tokens.RefreshToken}}
+		err = state.queries.UsersSetTokens(context.Background(), args)
+		if err != nil {
+			log.Println("Error: Failed to update user tokens.", err.Error(), "user id:", *profile.Id, "user email:", *profile.Email)
+			http.Error(w, "Failed to update user data.", http.StatusInternalServerError)
+			return
+		}
+
+		bytes, err := json.Marshal(tokens)
+		assert.True(err == nil, "Failed to serialize authentication response.", tokens)
+
+		w.Write(bytes)
+
+		return
 	} else if err != nil {
-		// TODO
-		log.Fatalln(err)
+		log.Println("Error: Failed to get user from database.", err.Error(), "user id:", *profile.Id, "user email:", *profile.Email)
+		http.Error(w, "Failed to get user.", http.StatusInternalServerError)
 		return
 	}
 
 	if user.Provider != AUTH_PROVIDER_GOOGLE {
-		// TODO
+		http.Error(w, "The user already exists but was created with a different authentication method than Google.", http.StatusBadRequest)
 		return
 	}
 
-	state.queries.UsersUpdateNameAndEmail(context.Background(), sqlc.UsersUpdateNameAndEmailParams{ID: *profile.Id, Name: *profile.Name, Email: *profile.Email})
-	// TODO
-}
-
-// TODO: simulator
-func getUserProfileFromGoogle(code string) (*googleProfile, error) {
-	token, err := googleOauthConfig.Exchange(context.Background(), code)
+	user, err = state.queries.UsersUpdateNameAndEmail(context.Background(), sqlc.UsersUpdateNameAndEmailParams{ID: *profile.Id, Name: *profile.Name, Email: *profile.Email})
 	if err != nil {
-		return nil, fmt.Errorf("Error during code exchange: %s", err.Error())
+		log.Println("Error: Failed to update user data.", err.Error(), "user id:", *profile.Id, "user email:", *profile.Email)
+		http.Error(w, "Failed to update user data.", http.StatusInternalServerError)
+		return
 	}
 
-	response, err := simulator.S.HttpGet(oauthUrlAPIGoogle + token.AccessToken)
+	tokens := genAuthTokens(user.ID, user.Email)
+
+	args := sqlc.UsersSetTokensParams{ID: user.ID, AccessToken: utils.SqlNullStr(tokens.AccessToken), RefreshToken: utils.SqlNullStr(tokens.RefreshToken)}
+	err = state.queries.UsersSetTokens(context.Background(), args)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get user info: %s", err.Error())
+		log.Println("Error: Failed to update user tokens.", err.Error(), "user id:", *profile.Id, "user email:", *profile.Email)
+		http.Error(w, "Failed to update user data.", http.StatusInternalServerError)
+		return
+	}
+
+	bytes, err := json.Marshal(tokens)
+	assert.True(err == nil, "Failed to serialize authentication response.", tokens)
+	w.Write(bytes)
+}
+
+func getUserProfileFromGoogle(code string) (*googleProfile, error) {
+	token, err := googleOauthConfig.Exchange(context.Background(), code) // TODO: simulator
+	if err != nil {
+		log.Println("Error: Failed to exchange google auth codes.", err.Error())
+		return nil, fmt.Errorf("Error during code exchange. Make sure this request was started from '/auth/google/login'.")
+	}
+
+	url := oauthUrlAPIGoogle + token.AccessToken
+	response, err := simulator.S.HttpGet(url)
+	if err != nil {
+		log.Println("Error: Failed to get google user info.", err.Error(), "url:", url)
+		return nil, fmt.Errorf("Failed to get user info. This might be an issue with the Google Oauth configuration.")
 	}
 
 	defer response.Body.Close()
 	contents, err := io.ReadAll(response.Body)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to read user info: %s", err.Error())
+		log.Println("Error: Failed to read google user info.", err.Error())
+		return nil, fmt.Errorf("Failed to read user info. Google might have send invalid data.")
 	}
 
-	// TODO: check that all required fields are set
 	var profile googleProfile
 	err = json.Unmarshal(contents, &profile)
 	if err != nil {
-		return nil, err
+		log.Println("Error: Failed to parse google user info.", err.Error(), "contents:", string(contents))
+		return nil, fmt.Errorf("Failed to parse user info. Google might have sent invalid data.")
 	}
 
 	err = utils.Validate.Struct(profile)
 	if err != nil {
-		return nil, err
+		log.Println("Error: Invalid google user info received.", err.Error())
+		return nil, fmt.Errorf("Received invalid user info. Google might have sent invalid data.")
 	}
 
 	return &profile, nil

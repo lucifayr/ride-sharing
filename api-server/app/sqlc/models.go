@@ -4,9 +4,15 @@
 
 package sqlc
 
+import (
+	"database/sql"
+)
+
 type User struct {
-	ID       string
-	Name     string
-	Email    string
-	Provider string
+	ID           string
+	Name         string
+	Email        string
+	Provider     string
+	AccessToken  sql.NullString
+	RefreshToken sql.NullString
 }
