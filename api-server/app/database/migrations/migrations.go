@@ -1,12 +1,12 @@
 package migrations
 
 import (
-	"database/sql"
 	"embed"
 	"fmt"
 	"log"
 	"path"
-	assert "ride_sharing_api/app/assert"
+	"ride_sharing_api/app/assert"
+	"ride_sharing_api/app/simulator"
 	"slices"
 	"sort"
 	"strings"
@@ -36,7 +36,7 @@ func FileSuffixes() []string {
 }
 
 func FromEmbedFs(fs embed.FS, root string) Migrations {
-	dir, err := fs.ReadDir(root)
+	dir, err := fs.ReadDir(root) // not using simulator because embed.fs is not doing any IO (basically)
 	if err != nil {
 		log.Fatalln("Failed to read migrations from root directory.", "root", root)
 	}
@@ -63,7 +63,7 @@ func FromEmbedFs(fs embed.FS, root string) Migrations {
 
 		path := path.Join(root, name)
 
-		file, err := fs.ReadFile(path)
+		file, err := fs.ReadFile(path) // not using simulator because of embedded fs
 		assert.True(err == nil, "Failed to read migrations file.", "root", root, "path", path)
 
 		sqlSource := string(file[:])
@@ -119,7 +119,7 @@ func FromEmbedFs(fs embed.FS, root string) Migrations {
 	return Migrations{migrationSourceTexts: migrations}
 }
 
-func (migrations *Migrations) Up(db *sql.DB) {
+func (migrations *Migrations) Up(db simulator.DB) {
 	for _, mig := range migrations.migrationSourceTexts {
 		sqlVal := mig.sql[MigrationKindValidate]
 		_, err := db.Exec(sqlVal)
@@ -138,7 +138,7 @@ func (migrations *Migrations) Up(db *sql.DB) {
 	}
 }
 
-func (migrations *Migrations) Down(db *sql.DB) {
+func (migrations *Migrations) Down(db simulator.DB) {
 	for _, mig := range migrations.migrationSourceTexts {
 		sql := mig.sql[MigrationKindDown]
 
@@ -150,7 +150,7 @@ func (migrations *Migrations) Down(db *sql.DB) {
 	}
 }
 
-func runMigration(db *sql.DB, sql string) error {
+func runMigration(db simulator.DB, sql string) error {
 	res, err := db.Exec(sql)
 	if err != nil {
 		return err

@@ -3,6 +3,7 @@ package utils
 import (
 	"errors"
 	"os"
+	"ride_sharing_api/app/simulator"
 )
 
 // Get the element at index	`idx` of `slice`. Returns `nil, false` if the index
@@ -26,18 +27,18 @@ func IdxOf[T comparable](slice []T, predicate func(item T) bool) int {
 }
 
 func FileExists(path string) bool {
-	_, err := os.Stat(path)
+	_, err := simulator.S.FsStat(path)
 	return !errors.Is(err, os.ErrNotExist)
 }
 
 func CreateDbFileIfNotExists(path string) error {
-	_, err := os.Stat(path)
+	_, err := simulator.S.FsStat(path)
 
 	if !errors.Is(err, os.ErrNotExist) {
 		return nil
 	}
 
-	f, err := os.Create(path)
+	f, err := simulator.S.FsCreate(path)
 	f.Close()
 
 	return err

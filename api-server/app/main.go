@@ -1,18 +1,21 @@
 package main
 
 import (
-	"database/sql"
 	"log"
 
-	embeddings "ride_sharing_api"
-	utils "ride_sharing_api/app/database"
-	migrations "ride_sharing_api/app/database/migrations"
+	"ride_sharing_api"
+	"ride_sharing_api/app/database"
+	"ride_sharing_api/app/database/migrations"
+	"ride_sharing_api/app/simulator"
+	"ride_sharing_api/app/utils"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
+var S simulator.Simulator
+
 func main() {
-	dbFile := "./database.db"
+	dbFile := database.NAME
 	err := utils.CreateDbFileIfNotExists(dbFile)
 	if err != nil {
 		log.Fatalln("Failed to create database file.", dbFile, err)
@@ -24,8 +27,8 @@ func main() {
 	}
 }
 
-func initDb(dbFile string) (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", "file:"+dbFile)
+func initDb(dbFile string) (simulator.DB, error) {
+	db, err := simulator.S.SqlOpen("sqlite3", "file:"+dbFile)
 	if err != nil {
 		return nil, err
 	}
