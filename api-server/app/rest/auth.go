@@ -24,9 +24,9 @@ type authTokens struct {
 }
 
 type accessToken struct {
-	Id    *string `json:"id" validate:"required"`
-	Email *string `json:"email" validate:"required"`
-	Token *string `json:"token" validate:"required"`
+	Id     *string `json:"id" validate:"required"`
+	Email  *string `json:"email" validate:"required"`
+	Random *string `json:"random" validate:"required"`
 }
 
 // TODO: change and move into ENV
@@ -44,15 +44,13 @@ func genAuthTokens(userId string, email string) authTokens {
 func encodeAccessToken(userId string, email string) string {
 	token := genRandBase64(512)
 	at := accessToken{
-		Id:    &userId,
-		Email: &email,
-		Token: &token,
+		Id:     &userId,
+		Email:  &email,
+		Random: &token,
 	}
 
-	bytes, err := json.Marshal(at)
+	plain, err := json.Marshal(at)
 	assert.True(err == nil, "Invalid token JSON.", "access-token:", at)
-
-	plain := []byte(base64.URLEncoding.EncodeToString(bytes))
 
 	block, err := aes.NewCipher([]byte(authTokenEncodingSecretKey))
 	assert.True(err == nil, "Invalid aes secret key.")
@@ -66,10 +64,15 @@ func encodeAccessToken(userId string, email string) string {
 	cfb := cipher.NewCFBEncrypter(block, iv)
 	cfb.XORKeyStream(ciphertext[aes.BlockSize:], plain)
 
-	return string(ciphertext)
+	return base64.URLEncoding.EncodeToString(ciphertext)
 }
 
 func decodeAccessToken(token []byte) (*accessToken, error) {
+	token, err := base64.URLEncoding.DecodeString(string(token))
+	if err != nil {
+		return nil, err
+	}
+
 	block, err := aes.NewCipher([]byte(authTokenEncodingSecretKey))
 	assert.True(err == nil, "Invalid aes secret key.")
 
@@ -83,11 +86,6 @@ func decodeAccessToken(token []byte) (*accessToken, error) {
 	plain := make([]byte, len(token))
 	cfb := cipher.NewCFBDecrypter(block, iv)
 	cfb.XORKeyStream(plain, token)
-
-	plain, err = base64.URLEncoding.DecodeString(string(plain))
-	if err != nil {
-		return nil, err
-	}
 
 	var at accessToken
 	err = json.Unmarshal(plain, &at)

@@ -43,8 +43,8 @@ var googleOauthConfig = &oauth2.Config{
 }
 
 func authHandlersGoogle(h simulator.HTTPMux) {
-	h.HandleFunc("/auth/google/login", withAllowedMethods(oauthLoginGoogle, "GET"))
-	h.HandleFunc("/auth/google/callback", withAllowedMethods(oauthCallbackGoogle, "GET"))
+	h.HandleFunc("GET /auth/google/login", oauthLoginGoogle)
+	h.HandleFunc("GET /auth/google/callback", oauthCallbackGoogle)
 }
 
 func oauthLoginGoogle(w http.ResponseWriter, r *http.Request) {
@@ -126,6 +126,7 @@ func oauthCallbackGoogle(w http.ResponseWriter, r *http.Request) {
 }
 
 func getUserProfileFromGoogle(code string) (*googleProfile, error) {
+	// TODO: validate state
 	token, err := googleOauthConfig.Exchange(context.Background(), code) // TODO: simulator
 	if err != nil {
 		log.Println("Error: Failed to exchange google auth codes.", err.Error())
