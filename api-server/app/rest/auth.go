@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"ride_sharing_api/app/assert"
 	"ride_sharing_api/app/simulator"
@@ -33,6 +34,7 @@ type accessToken struct {
 
 // Must be 32 bytes long!
 const authTokenEncodingSecretKey = "268aTvg3uNE*xLkB7tYSW%Cl#CmuY5!L"
+const authStateEncodingSecretKey = "@j&P4m$Fcq$en*C75six#9dbNBDijJgU"
 
 func genAuthTokens(userId string, email string) authTokens {
 	return authTokens{
@@ -50,19 +52,10 @@ func encodeAccessToken(userId string, email string) string {
 	}
 
 	plain, err := json.Marshal(at)
-	assert.True(err == nil, "Invalid token JSON.", "access-token:", at)
+	assert.True(err == nil, "Invalid token JSON.", "access-token:", at, "error", func() any { return err.Error() })
 
-	block, err := aes.NewCipher([]byte(authTokenEncodingSecretKey))
-	assert.True(err == nil, "Invalid aes secret key.")
-	assert.True(len(plain) > block.BlockSize(), "Plaintext length too short.")
-
-	ciphertext := make([]byte, aes.BlockSize+len(plain))
-	iv := ciphertext[:aes.BlockSize]
-	_, err = io.ReadFull(rand.Reader, iv)
-	assert.True(err == nil, "Failed to read block-size from ciphertext")
-
-	cfb := cipher.NewCFBEncrypter(block, iv)
-	cfb.XORKeyStream(ciphertext[aes.BlockSize:], plain)
+	ciphertext, err := encrypt(plain, []byte(authTokenEncodingSecretKey))
+	assert.True(err == nil, "Encryption error on server defined data.", "error:", func() any { return err.Error() })
 
 	return base64.URLEncoding.EncodeToString(ciphertext)
 }
@@ -73,19 +66,10 @@ func decodeAccessToken(token []byte) (*accessToken, error) {
 		return nil, err
 	}
 
-	block, err := aes.NewCipher([]byte(authTokenEncodingSecretKey))
-	assert.True(err == nil, "Invalid aes secret key.")
-
-	if len(token) < aes.BlockSize {
-		return nil, errors.New("ciphertext too short/invalid.")
+	plain, err := decrypt(token, []byte(authTokenEncodingSecretKey))
+	if err != nil {
+		return nil, err
 	}
-
-	iv := token[:aes.BlockSize]
-	token = token[aes.BlockSize:]
-
-	plain := make([]byte, len(token))
-	cfb := cipher.NewCFBDecrypter(block, iv)
-	cfb.XORKeyStream(plain, token)
 
 	var at accessToken
 	err = json.Unmarshal(plain, &at)
@@ -99,6 +83,48 @@ func decodeAccessToken(token []byte) (*accessToken, error) {
 	}
 
 	return &at, nil
+}
+
+func encrypt(plain []byte, key []byte) ([]byte, error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return []byte{}, err
+	}
+	if len(plain) < aes.BlockSize {
+		return []byte{}, fmt.Errorf("Plaintext length too short.")
+	}
+
+	ciphertext := make([]byte, aes.BlockSize+len(plain))
+	iv := ciphertext[:aes.BlockSize]
+	_, err = io.ReadFull(rand.Reader, iv)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	cfb := cipher.NewCFBEncrypter(block, iv)
+	cfb.XORKeyStream(ciphertext[aes.BlockSize:], plain)
+
+	return ciphertext, nil
+}
+
+func decrypt(ciphertext []byte, key []byte) ([]byte, error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	if len(ciphertext) < aes.BlockSize {
+		return []byte{}, errors.New("Ciphertext length too short.")
+	}
+
+	iv := ciphertext[:aes.BlockSize]
+	ciphertext = ciphertext[aes.BlockSize:]
+
+	plaintext := make([]byte, len(ciphertext))
+	cfb := cipher.NewCFBDecrypter(block, iv)
+	cfb.XORKeyStream(plaintext, ciphertext)
+
+	return plaintext, nil
 }
 
 func genRandBase64(size int) string {

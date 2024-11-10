@@ -5,12 +5,16 @@ import (
 	"net/http"
 	"ride_sharing_api/app/simulator"
 	sqlc "ride_sharing_api/app/sqlc"
+	"sync"
+	"time"
 )
 
-var state = &apiState{}
+var state *apiState
 
 type apiState struct {
-	queries *sqlc.Queries
+	queries     *sqlc.Queries
+	mutex       sync.Mutex
+	oauthStates map[string]time.Time
 }
 
 const middlewareKey = "middleware"
@@ -27,7 +31,7 @@ type middlewareData struct {
 }
 
 func NewRESTApi(queries *sqlc.Queries) http.Handler {
-	state.queries = queries
+	state = &apiState{oauthStates: make(map[string]time.Time), queries: queries}
 
 	mux := simulator.S.NewHttpServerMux()
 	authHandlersGoogle(mux)

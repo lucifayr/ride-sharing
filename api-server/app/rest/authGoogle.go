@@ -3,6 +3,7 @@ package rest
 import (
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,6 +13,7 @@ import (
 	"ride_sharing_api/app/simulator"
 	"ride_sharing_api/app/sqlc"
 	"ride_sharing_api/app/utils"
+	"time"
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -48,13 +50,44 @@ func authHandlersGoogle(h simulator.HTTPMux) {
 }
 
 func oauthLoginGoogle(w http.ResponseWriter, r *http.Request) {
-	oauthState := genRandBase64(16)
+	oauthStateBytes, err := encrypt([]byte(genRandBase64(32)), []byte(authStateEncodingSecretKey))
+	if err != nil {
+		log.Println("Error: Failed to encrypt oauth state.", "error:", err)
+		http.Error(w, "Failed to redirect to authentication provider.", http.StatusInternalServerError)
+		return
+	}
+
+	oauthState := base64.URLEncoding.EncodeToString(oauthStateBytes)
+
+	state.mutex.Lock()
+	state.oauthStates[oauthState] = time.Now()
+	state.mutex.Unlock()
+
 	url := googleOauthConfig.AuthCodeURL(oauthState, oauth2.AccessTypeOffline, oauth2.ApprovalForce)
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
 func oauthCallbackGoogle(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
+
+	oauthState := r.FormValue("state")
+	state.mutex.Lock()
+	createdAt, ok := state.oauthStates[oauthState]
+	if !ok || time.Now().Sub(createdAt) > time.Duration(5*time.Minute) {
+		state.mutex.Unlock()
+		http.Error(w, "Invalid 'state' parameter. Make sure authentication request are only started from '/auth/google/login'.", http.StatusBadRequest)
+		return
+	}
+	delete(state.oauthStates, oauthState)
+
+	for oauthState, createdAt := range state.oauthStates {
+		elapsed := time.Now().Sub(createdAt)
+		if elapsed > time.Duration(5*time.Minute) {
+			delete(state.oauthStates, oauthState)
+		}
+	}
+
+	state.mutex.Unlock()
 
 	profile, err := getUserProfileFromGoogle(r.FormValue("code"))
 	if err != nil {
