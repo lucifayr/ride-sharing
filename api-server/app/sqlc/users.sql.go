@@ -18,10 +18,10 @@ VALUES
 `
 
 type UsersCreateParams struct {
-	ID       string
-	Name     string
-	Email    string
-	Provider string
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Provider string `json:"provider"`
 }
 
 // See sqlc docs for more information:
@@ -78,9 +78,9 @@ WHERE
 `
 
 type UsersSetTokensParams struct {
-	AccessToken  sql.NullString
-	RefreshToken sql.NullString
-	ID           string
+	AccessToken  sql.NullString `json:"accessToken"`
+	RefreshToken sql.NullString `json:"refreshToken"`
+	ID           string         `json:"id"`
 }
 
 func (q *Queries) UsersSetTokens(ctx context.Context, arg UsersSetTokensParams) error {
@@ -98,9 +98,9 @@ WHERE
 `
 
 type UsersUpdateNameAndEmailParams struct {
-	Name  string
-	Email string
-	ID    string
+	Name  string `json:"name"`
+	Email string `json:"email"`
+	ID    string `json:"id"`
 }
 
 func (q *Queries) UsersUpdateNameAndEmail(ctx context.Context, arg UsersUpdateNameAndEmailParams) (User, error) {

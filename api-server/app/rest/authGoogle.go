@@ -9,7 +9,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"ride_sharing_api/app/assert"
 	"ride_sharing_api/app/simulator"
 	"ride_sharing_api/app/sqlc"
 	"ride_sharing_api/app/utils"
@@ -68,8 +67,6 @@ func oauthLoginGoogle(w http.ResponseWriter, r *http.Request) {
 }
 
 func oauthCallbackGoogle(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("Content-Type", "application/json")
-
 	oauthState := r.FormValue("state")
 	state.mutex.Lock()
 	createdAt, ok := state.oauthStates[oauthState]
@@ -89,7 +86,7 @@ func oauthCallbackGoogle(w http.ResponseWriter, r *http.Request) {
 
 	state.mutex.Unlock()
 
-	profile, err := getUserProfileFromGoogle(r.FormValue("code"))
+	profile, err := getUserProfileFromGoogle(r.Context(), r.FormValue("code"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -100,9 +97,9 @@ func oauthCallbackGoogle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := state.queries.UsersGetById(context.Background(), *profile.Id)
+	user, err := state.queries.UsersGetById(r.Context(), *profile.Id)
 	if err == sql.ErrNoRows {
-		user, err = state.queries.UsersCreate(context.Background(), sqlc.UsersCreateParams{ID: *profile.Id, Name: *profile.Name, Email: *profile.Email, Provider: "google"})
+		user, err = state.queries.UsersCreate(r.Context(), sqlc.UsersCreateParams{ID: *profile.Id, Name: *profile.Name, Email: *profile.Email, Provider: "google"})
 		if err != nil {
 			log.Println("Error: Failed to create user after Google authentication.", err.Error(), "user email:", *profile.Email)
 			http.Error(w, "Failed to create user after Google authentication.", http.StatusInternalServerError)
@@ -112,18 +109,15 @@ func oauthCallbackGoogle(w http.ResponseWriter, r *http.Request) {
 		tokens := genAuthTokens(user.ID, user.Email)
 
 		args := sqlc.UsersSetTokensParams{ID: user.ID, AccessToken: sql.NullString{String: tokens.AccessToken}, RefreshToken: sql.NullString{String: tokens.RefreshToken}}
-		err = state.queries.UsersSetTokens(context.Background(), args)
+		err = state.queries.UsersSetTokens(r.Context(), args)
 		if err != nil {
 			log.Println("Error: Failed to update user tokens.", err.Error(), "user id:", *profile.Id, "user email:", *profile.Email)
 			http.Error(w, "Failed to update user data.", http.StatusInternalServerError)
 			return
 		}
 
-		bytes, err := json.Marshal(tokens)
-		assert.True(err == nil, "Failed to serialize authentication response.", tokens)
-
-		w.Write(bytes)
-
+		url := fmt.Sprintf("%s?accessToken=%s&refreshToken=%s", clientUrlAuth, tokens.AccessToken, tokens.RefreshToken)
+		http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 		return
 	} else if err != nil {
 		log.Println("Error: Failed to get user from database.", err.Error(), "user id:", *profile.Id, "user email:", *profile.Email)
@@ -136,7 +130,7 @@ func oauthCallbackGoogle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err = state.queries.UsersUpdateNameAndEmail(context.Background(), sqlc.UsersUpdateNameAndEmailParams{ID: *profile.Id, Name: *profile.Name, Email: *profile.Email})
+	user, err = state.queries.UsersUpdateNameAndEmail(r.Context(), sqlc.UsersUpdateNameAndEmailParams{ID: *profile.Id, Name: *profile.Name, Email: *profile.Email})
 	if err != nil {
 		log.Println("Error: Failed to update user data.", err.Error(), "user id:", *profile.Id, "user email:", *profile.Email)
 		http.Error(w, "Failed to update user data.", http.StatusInternalServerError)
@@ -146,20 +140,19 @@ func oauthCallbackGoogle(w http.ResponseWriter, r *http.Request) {
 	tokens := genAuthTokens(user.ID, user.Email)
 
 	args := sqlc.UsersSetTokensParams{ID: user.ID, AccessToken: utils.SqlNullStr(tokens.AccessToken), RefreshToken: utils.SqlNullStr(tokens.RefreshToken)}
-	err = state.queries.UsersSetTokens(context.Background(), args)
+	err = state.queries.UsersSetTokens(r.Context(), args)
 	if err != nil {
 		log.Println("Error: Failed to update user tokens.", err.Error(), "user id:", *profile.Id, "user email:", *profile.Email)
 		http.Error(w, "Failed to update user data.", http.StatusInternalServerError)
 		return
 	}
 
-	bytes, err := json.Marshal(tokens)
-	assert.True(err == nil, "Failed to serialize authentication response.", tokens)
-	w.Write(bytes)
+	url := fmt.Sprintf("%s?accessToken=%s&refreshToken=%s", clientUrlAuth, tokens.AccessToken, tokens.RefreshToken)
+	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
-func getUserProfileFromGoogle(code string) (*googleProfile, error) {
-	token, err := googleOauthConfig.Exchange(context.Background(), code) // TODO: simulator
+func getUserProfileFromGoogle(ctx context.Context, code string) (*googleProfile, error) {
+	token, err := simulator.S.OauthGoogleExchangeCode(ctx, googleOauthConfig, code)
 	if err != nil {
 		log.Println("Error: Failed to exchange google auth codes.", err.Error())
 		return nil, fmt.Errorf("Error during code exchange. Make sure this request was started from '/auth/google/login'.")

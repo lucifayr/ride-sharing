@@ -1,3 +1,3 @@
 package database
 
-const NAME = "rides.db"
+var Name = "rides.db"

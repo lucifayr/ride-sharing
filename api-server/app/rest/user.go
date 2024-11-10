@@ -1,8 +1,9 @@
 package rest
 
 import (
-	"log"
+	"encoding/json"
 	"net/http"
+	"ride_sharing_api/app/assert"
 	"ride_sharing_api/app/simulator"
 	"ride_sharing_api/app/sqlc"
 )
@@ -13,5 +14,9 @@ func userHandlers(h simulator.HTTPMux) {
 
 func getUserById(w http.ResponseWriter, r *http.Request) {
 	user := getMiddlewareData[sqlc.User](r, "user")
-	log.Println(user)
+	bytes, err := json.Marshal(user)
+	assert.True(err == nil, "Failed to serialize user struct.", "user:", user, "error:", err)
+
+	w.Header().Add("Content-Type", "application/json")
+	w.Write(bytes)
 }

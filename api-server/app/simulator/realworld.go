@@ -6,9 +6,12 @@ import (
 	"database/sql"
 	"io"
 	"io/fs"
+	"log"
 	"net/http"
 	"os"
 	"ride_sharing_api/app/assert"
+
+	"golang.org/x/oauth2"
 )
 
 type SimulatorRealWorld struct{}
@@ -38,8 +41,27 @@ func (s *SimulatorRealWorld) FsCreate(name string) (File, error) {
 	return &FileRealWorld{inner: f}, nil
 }
 
-func (s *SimulatorRealWorld) NewHttpServerMux() HTTPMux {
+func (s *SimulatorRealWorld) HttpNewServerMux() HTTPMux {
 	return &HTTPMuxRealWorld{inner: http.NewServeMux()}
+}
+
+func (s *SimulatorRealWorld) HttpListenAndServe(handler http.Handler, addr string) error {
+	server := &http.Server{
+		Addr:    addr,
+		Handler: handler,
+	}
+
+	log.Println("Listening on", server.Addr)
+	err := server.ListenAndServe()
+	return err
+}
+
+func (s *SimulatorRealWorld) HttpGet(url string) (resp *http.Response, err error) {
+	return http.Get(url)
+}
+
+func (s *SimulatorRealWorld) OauthGoogleExchangeCode(ctx context.Context, cfg *oauth2.Config, code string) (*oauth2.Token, error) {
+	return cfg.Exchange(ctx, code)
 }
 
 func (s *SimulatorRealWorld) LogOutput() io.Writer {
@@ -57,10 +79,6 @@ func (s *SimulatorRealWorld) SqlOpen(driverName string, dataSourceName string) (
 
 func (s *SimulatorRealWorld) RandCrypto(b []byte) {
 	rand.Read(b)
-}
-
-func (s *SimulatorRealWorld) HttpGet(url string) (resp *http.Response, err error) {
-	return http.Get(url)
 }
 
 func (db *DBRealWorld) Exec(query string, args ...any) (sql.Result, error) {

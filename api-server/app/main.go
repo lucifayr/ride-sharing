@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"net/http"
 
 	"ride_sharing_api"
 	"ride_sharing_api/app/database"
@@ -18,7 +17,7 @@ import (
 var S simulator.Simulator
 
 func main() {
-	dbFile := database.NAME
+	dbFile := database.Name
 	err := utils.CreateDbFileIfNotExists(dbFile)
 	if err != nil {
 		log.Fatalln("Failed to create database file.", dbFile, err)
@@ -29,12 +28,8 @@ func main() {
 		log.Fatalln("Failed to initialize database.", dbFile, err)
 	}
 
-	server := &http.Server{
-		Addr:    "127.0.0.1:8000",
-		Handler: rest.NewRESTApi(sqlc.New(db)),
-	}
-	log.Println("Listening on", server.Addr)
-	err = server.ListenAndServe()
+	handler := rest.NewRESTApi(sqlc.New(db))
+	err = simulator.S.HttpListenAndServe(handler, "127.0.0.1:8000")
 	if err != nil {
 		log.Fatalln(err)
 	} else {

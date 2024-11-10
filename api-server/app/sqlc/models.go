@@ -9,10 +9,10 @@ import (
 )
 
 type User struct {
-	ID           string
-	Name         string
-	Email        string
-	Provider     string
-	AccessToken  sql.NullString
-	RefreshToken sql.NullString
+	ID           string         `json:"id"`
+	Name         string         `json:"name"`
+	Email        string         `json:"email"`
+	Provider     string         `json:"provider"`
+	AccessToken  sql.NullString `json:"accessToken"`
+	RefreshToken sql.NullString `json:"refreshToken"`
 }

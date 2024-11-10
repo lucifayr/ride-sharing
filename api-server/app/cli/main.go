@@ -150,7 +150,7 @@ func parseCreateMigrationFlags(args []string) map[string]any {
 }
 
 func setupDb() *sql.DB {
-	dbFile := database.NAME
+	dbFile := database.Name
 	err := utils.CreateDbFileIfNotExists(dbFile)
 	if err != nil {
 		log.Fatalln("Failed to create database file.", dbFile, err)

@@ -6,6 +6,8 @@ import (
 	"io"
 	"io/fs"
 	"net/http"
+
+	"golang.org/x/oauth2"
 )
 
 // !EXPERIMENTAL!
@@ -31,7 +33,11 @@ type Simulator interface {
 
 	HttpGet(url string) (resp *http.Response, err error)
 
-	NewHttpServerMux() HTTPMux
+	HttpNewServerMux() HTTPMux
+
+	HttpListenAndServe(handler http.Handler, addr string) error
+
+	OauthGoogleExchangeCode(ctx context.Context, cfg *oauth2.Config, code string) (*oauth2.Token, error)
 
 	// Randomizes the bytes in `b` with a cyptographically save algorithm. Modifies `b` inplace.
 	RandCrypto(b []byte)

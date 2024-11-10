@@ -23,6 +23,8 @@ const (
 	AUTH_PROVIDER_MICROSOFT = "microsoft"
 )
 
+const clientUrlAuth = "http://127.0.0.1:5173/authenticate"
+
 type authTokens struct {
 	AccessToken  string `json:"accessToken"`
 	RefreshToken string `json:"refreshToken"`

@@ -33,7 +33,7 @@ type middlewareData struct {
 func NewRESTApi(queries *sqlc.Queries) http.Handler {
 	state = &apiState{oauthStates: make(map[string]time.Time), queries: queries}
 
-	mux := simulator.S.NewHttpServerMux()
+	mux := simulator.S.HttpNewServerMux()
 	authHandlers(mux)
 	authHandlersGoogle(mux)
 	userHandlers(mux)
@@ -74,15 +74,15 @@ func (b *handleFuncBuilder) build() func(w http.ResponseWriter, r *http.Request)
 
 func bearerAuth(ignoreExpired bool) func(w http.ResponseWriter, r *http.Request) (bool, *middlewareData) {
 	return func(w http.ResponseWriter, r *http.Request) (bool, *middlewareData) {
-		token := r.Header.Get("Authentication")
+		token := r.Header.Get("Authorization")
 		if token == "" {
-			http.Error(w, "Missing header 'Authentication'.", http.StatusBadRequest)
+			http.Error(w, "Missing header 'Authorization'.", http.StatusBadRequest)
 			return true, nil
 		}
 
 		tokens, err := decodeAccessToken([]byte(token))
 		if err != nil || (!ignoreExpired && time.Now().After(tokens.ExpiresAt)) {
-			http.Error(w, "Invalid access token in 'Authentication' header.", http.StatusBadRequest)
+			http.Error(w, "Invalid access token in 'Authorization' header.", http.StatusBadRequest)
 			return true, nil
 		}
 
