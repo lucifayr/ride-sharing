@@ -2,6 +2,7 @@ package rest
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"ride_sharing_api/app/simulator"
 	sqlc "ride_sharing_api/app/sqlc"
@@ -79,12 +80,10 @@ func bearerAuth(w http.ResponseWriter, r *http.Request) (bool, *middlewareData) 
 	}
 
 	tokens, err := decodeAccessToken([]byte(token))
-	if err != nil {
+	if err != nil || time.Now().After(tokens.ExpiresAt) {
 		http.Error(w, "Invalid access token in 'Authentication' header.", http.StatusBadRequest)
 		return true, nil
 	}
-
-	// TODO: check if expired
 
 	user, err := state.queries.UsersGetById(r.Context(), *tokens.Id)
 	if err != nil {

@@ -159,7 +159,6 @@ func oauthCallbackGoogle(w http.ResponseWriter, r *http.Request) {
 }
 
 func getUserProfileFromGoogle(code string) (*googleProfile, error) {
-	// TODO: validate state
 	token, err := googleOauthConfig.Exchange(context.Background(), code) // TODO: simulator
 	if err != nil {
 		log.Println("Error: Failed to exchange google auth codes.", err.Error())

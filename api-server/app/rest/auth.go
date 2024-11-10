@@ -12,6 +12,7 @@ import (
 	"ride_sharing_api/app/assert"
 	"ride_sharing_api/app/simulator"
 	"ride_sharing_api/app/utils"
+	"time"
 )
 
 const (
@@ -25,9 +26,10 @@ type authTokens struct {
 }
 
 type accessToken struct {
-	Id     *string `json:"id" validate:"required"`
-	Email  *string `json:"email" validate:"required"`
-	Random *string `json:"random" validate:"required"`
+	Id        *string   `json:"id" validate:"required"`
+	Email     *string   `json:"email" validate:"required"`
+	Random    *string   `json:"random" validate:"required"`
+	ExpiresAt time.Time `json:"expiresAt" validate:"required"`
 }
 
 // TODO: change and move into ENV
@@ -46,9 +48,10 @@ func genAuthTokens(userId string, email string) authTokens {
 func encodeAccessToken(userId string, email string) string {
 	token := genRandBase64(512)
 	at := accessToken{
-		Id:     &userId,
-		Email:  &email,
-		Random: &token,
+		Id:        &userId,
+		Email:     &email,
+		Random:    &token,
+		ExpiresAt: time.Now().Add(24 * time.Hour),
 	}
 
 	plain, err := json.Marshal(at)
