@@ -31,7 +31,10 @@ type Simulator interface {
 	// database name and connection information.
 	SqlOpen(driverName string, dataSourceName string) (DB, error)
 
+	DbName() string
+
 	HttpGet(url string) (resp *http.Response, err error)
+	HttpRedirect(w http.ResponseWriter, r *http.Request, url string, code int)
 
 	HttpNewServerMux() HTTPMux
 

@@ -4,7 +4,6 @@ import (
 	"log"
 
 	"ride_sharing_api"
-	"ride_sharing_api/app/database"
 	"ride_sharing_api/app/database/migrations"
 	"ride_sharing_api/app/rest"
 	"ride_sharing_api/app/simulator"
@@ -17,7 +16,7 @@ import (
 var S simulator.Simulator
 
 func main() {
-	dbFile := database.Name
+	dbFile := simulator.S.DbName()
 	err := utils.CreateDbFileIfNotExists(dbFile)
 	if err != nil {
 		log.Fatalln("Failed to create database file.", dbFile, err)

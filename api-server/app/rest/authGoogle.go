@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"ride_sharing_api/app/common"
 	"ride_sharing_api/app/simulator"
 	"ride_sharing_api/app/sqlc"
 	"ride_sharing_api/app/utils"
@@ -17,13 +18,6 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 )
-
-type googleProfile struct {
-	Id            *string `json:"id" validate:"required"`
-	Email         *string `json:"email" validate:"required"`
-	VerifiedEmail *bool   `json:"verified_email" validate:"required"`
-	Name          *string `json:"name" validate:"required"`
-}
 
 // Google config:
 // https://console.cloud.google.com/auth/clients?highlightClient=750385423567-rsrv4dknuvrts9rv5neab3dl667r5la6.apps.googleusercontent.com&authuser=2&organizationId=0&project=htl-ride-sharing
@@ -63,7 +57,7 @@ func oauthLoginGoogle(w http.ResponseWriter, r *http.Request) {
 	state.mutex.Unlock()
 
 	url := googleOauthConfig.AuthCodeURL(oauthState, oauth2.AccessTypeOffline, oauth2.ApprovalForce)
-	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+	simulator.S.HttpRedirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
 func oauthCallbackGoogle(w http.ResponseWriter, r *http.Request) {
@@ -88,6 +82,7 @@ func oauthCallbackGoogle(w http.ResponseWriter, r *http.Request) {
 
 	profile, err := getUserProfileFromGoogle(r.Context(), r.FormValue("code"))
 	if err != nil {
+		log.Println("Error: Failed to get Google user profile.", "error:", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -117,7 +112,7 @@ func oauthCallbackGoogle(w http.ResponseWriter, r *http.Request) {
 		}
 
 		url := fmt.Sprintf("%s?accessToken=%s&refreshToken=%s", clientUrlAuth, tokens.AccessToken, tokens.RefreshToken)
-		http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+		simulator.S.HttpRedirect(w, r, url, http.StatusTemporaryRedirect)
 		return
 	} else if err != nil {
 		log.Println("Error: Failed to get user from database.", err.Error(), "user id:", *profile.Id, "user email:", *profile.Email)
@@ -148,10 +143,10 @@ func oauthCallbackGoogle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	url := fmt.Sprintf("%s?accessToken=%s&refreshToken=%s", clientUrlAuth, tokens.AccessToken, tokens.RefreshToken)
-	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+	simulator.S.HttpRedirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
-func getUserProfileFromGoogle(ctx context.Context, code string) (*googleProfile, error) {
+func getUserProfileFromGoogle(ctx context.Context, code string) (*common.GoogleProfile, error) {
 	token, err := simulator.S.OauthGoogleExchangeCode(ctx, googleOauthConfig, code)
 	if err != nil {
 		log.Println("Error: Failed to exchange google auth codes.", err.Error())
@@ -172,7 +167,7 @@ func getUserProfileFromGoogle(ctx context.Context, code string) (*googleProfile,
 		return nil, fmt.Errorf("Failed to read user info. Google might have send invalid data.")
 	}
 
-	var profile googleProfile
+	var profile common.GoogleProfile
 	err = json.Unmarshal(contents, &profile)
 	if err != nil {
 		log.Println("Error: Failed to parse google user info.", err.Error(), "contents:", string(contents))

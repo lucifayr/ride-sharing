@@ -60,12 +60,20 @@ func (s *SimulatorRealWorld) HttpGet(url string) (resp *http.Response, err error
 	return http.Get(url)
 }
 
+func (s *SimulatorRealWorld) HttpRedirect(w http.ResponseWriter, r *http.Request, url string, code int) {
+	http.Redirect(w, r, url, code)
+}
+
 func (s *SimulatorRealWorld) OauthGoogleExchangeCode(ctx context.Context, cfg *oauth2.Config, code string) (*oauth2.Token, error) {
 	return cfg.Exchange(ctx, code)
 }
 
 func (s *SimulatorRealWorld) LogOutput() io.Writer {
 	return os.Stdout
+}
+
+func (s *SimulatorRealWorld) DbName() string {
+	return "rides.db"
 }
 
 func (s *SimulatorRealWorld) SqlOpen(driverName string, dataSourceName string) (DB, error) {
