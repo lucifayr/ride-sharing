@@ -1,0 +1,12 @@
+[Unit]
+Description=ride sharing api
+
+[Service]
+Type=simple
+User=root
+Restart=on-failure
+RestartSec=3
+ExecStart=/home/guest/ride-sharing/api-server/result-api/bin/main
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,16 @@
+[Unit]
+Description=ride sharing web app
+
+[Service]
+Type=simple
+User=guest
+Group=ssl-cert
+Restart=on-failure
+RestartSec=3
+Environment=PUBLIC_DIR=/home/guest/ride-sharing/web-app/result-web-app/public
+Environment=TLS_CERT=/etc/letsencrypt/live/junegschwantner.com/fullchain.pem
+Environment=TLS_KEY=/etc/letsencrypt/live/junegschwantner.com/privkey.pem
+ExecStart=/home/website/website/result-server/bin/http-server
+
+[Install]
+WantedBy=default.target

@@ -1,7 +1,6 @@
 import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import { useUserStore } from "../lib/stores";
 import { LoadingSpinner } from "../lib/components/Spinner";
-import { UserLoggedIn } from "../lib/models/user";
 import { useForm } from "@tanstack/react-form";
 
 export const Route = createLazyFileRoute("/dashboard")({
@@ -22,13 +21,13 @@ function DashBoard() {
         Hello {user.name}! <br />
         Good design will soon find your heart
       </span>
-      <CreateRideForm user={user} />
+      <CreateRideForm />
     </div>
   );
 }
 
 // WIP
-function CreateRideForm({ user }: { user: UserLoggedIn }) {
+function CreateRideForm() {
   const form = useForm({
     defaultValues: {
       locationFrom: "",
