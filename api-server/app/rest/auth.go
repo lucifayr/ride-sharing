@@ -9,8 +9,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
+	"net/http"
 	"ride_sharing_api/app/assert"
 	"ride_sharing_api/app/simulator"
+	"ride_sharing_api/app/sqlc"
 	"ride_sharing_api/app/utils"
 	"time"
 )
@@ -37,6 +40,59 @@ type accessToken struct {
 // Must be 32 bytes long!
 const authTokenEncodingSecretKey = "268aTvg3uNE*xLkB7tYSW%Cl#CmuY5!L"
 const authStateEncodingSecretKey = "@j&P4m$Fcq$en*C75six#9dbNBDijJgU"
+
+func authHandlers(h simulator.HTTPMux) {
+	h.HandleFunc("POST /auth/refresh", handle(refreshAuthTokens).with(bearerAuth(true)).build())
+}
+
+type refreshAuthTokensBody struct {
+	RefreshToken *string `json:"refreshToken" validate:"required"`
+}
+
+func refreshAuthTokens(w http.ResponseWriter, r *http.Request) {
+	// Locking to prevent change of access token during refresh
+	state.mutex.Lock()
+	defer state.mutex.Unlock()
+
+	user := getMiddlewareData[sqlc.User](r, "user")
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Failed to read request body.", http.StatusBadRequest)
+		return
+	}
+
+	var refresh refreshAuthTokensBody
+	err = json.Unmarshal(body, &refresh)
+	if err != nil {
+		http.Error(w, "Failed to read request body as JSON.", http.StatusBadRequest)
+		return
+	}
+
+	err = utils.Validate.Struct(refresh)
+	if err != nil {
+		http.Error(w, "Invalid JSON in request body. "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if !user.RefreshToken.Valid || user.RefreshToken.String != *refresh.RefreshToken {
+		http.Error(w, "Invalid refresh token cannot be used to get new tokens.", http.StatusUnauthorized)
+		return
+	}
+
+	tokens := genAuthTokens(user.ID, user.Email)
+	bytes, err := json.Marshal(tokens)
+	assert.True(err == nil, "Failed to serialize authentication tokens.", tokens, "error:", func() any { return err })
+
+	args := sqlc.UsersSetTokensParams{ID: user.ID, AccessToken: utils.SqlNullStr(tokens.AccessToken), RefreshToken: utils.SqlNullStr(tokens.RefreshToken)}
+	err = state.queries.UsersSetTokens(r.Context(), args)
+	if err != nil {
+		log.Println("Failed to update authentication tokens.", "error:", err)
+		http.Error(w, "Failed to update authentication tokens.", http.StatusInternalServerError)
+		return
+	}
+
+	w.Write(bytes)
+}
 
 func genAuthTokens(userId string, email string) authTokens {
 	return authTokens{

@@ -2,7 +2,6 @@ package rest
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"ride_sharing_api/app/simulator"
 	sqlc "ride_sharing_api/app/sqlc"
@@ -35,6 +34,7 @@ func NewRESTApi(queries *sqlc.Queries) http.Handler {
 	state = &apiState{oauthStates: make(map[string]time.Time), queries: queries}
 
 	mux := simulator.S.NewHttpServerMux()
+	authHandlers(mux)
 	authHandlersGoogle(mux)
 	userHandlers(mux)
 
@@ -72,29 +72,31 @@ func (b *handleFuncBuilder) build() func(w http.ResponseWriter, r *http.Request)
 	}
 }
 
-func bearerAuth(w http.ResponseWriter, r *http.Request) (bool, *middlewareData) {
-	token := r.Header.Get("Authentication")
-	if token == "" {
-		http.Error(w, "Missing header 'Authentication'.", http.StatusBadRequest)
-		return true, nil
-	}
+func bearerAuth(ignoreExpired bool) func(w http.ResponseWriter, r *http.Request) (bool, *middlewareData) {
+	return func(w http.ResponseWriter, r *http.Request) (bool, *middlewareData) {
+		token := r.Header.Get("Authentication")
+		if token == "" {
+			http.Error(w, "Missing header 'Authentication'.", http.StatusBadRequest)
+			return true, nil
+		}
 
-	tokens, err := decodeAccessToken([]byte(token))
-	if err != nil || time.Now().After(tokens.ExpiresAt) {
-		http.Error(w, "Invalid access token in 'Authentication' header.", http.StatusBadRequest)
-		return true, nil
-	}
+		tokens, err := decodeAccessToken([]byte(token))
+		if err != nil || (!ignoreExpired && time.Now().After(tokens.ExpiresAt)) {
+			http.Error(w, "Invalid access token in 'Authentication' header.", http.StatusBadRequest)
+			return true, nil
+		}
 
-	user, err := state.queries.UsersGetById(r.Context(), *tokens.Id)
-	if err != nil {
-		http.Error(w, "Failed to get user with matching token.", http.StatusNotFound)
-		return true, nil
-	}
+		user, err := state.queries.UsersGetById(r.Context(), *tokens.Id)
+		if err != nil {
+			http.Error(w, "Failed to get user with matching token.", http.StatusNotFound)
+			return true, nil
+		}
 
-	if !user.AccessToken.Valid || user.AccessToken.String != token {
-		http.Error(w, "Token is invalid.", http.StatusUnauthorized)
-		return true, nil
-	}
+		if !user.AccessToken.Valid || user.AccessToken.String != token {
+			http.Error(w, "Token is invalid.", http.StatusUnauthorized)
+			return true, nil
+		}
 
-	return false, &middlewareData{key: "user", value: user}
+		return false, &middlewareData{key: "user", value: user}
+	}
 }

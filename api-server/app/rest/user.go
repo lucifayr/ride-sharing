@@ -8,7 +8,7 @@ import (
 )
 
 func userHandlers(h simulator.HTTPMux) {
-	h.HandleFunc("GET /users", handle(getUserById).with(bearerAuth).build())
+	h.HandleFunc("GET /users", handle(getUserById).with(bearerAuth(false)).build())
 }
 
 func getUserById(w http.ResponseWriter, r *http.Request) {
