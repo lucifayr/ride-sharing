@@ -8,6 +8,20 @@ import (
 	"database/sql"
 )
 
+type Ride struct {
+	ID             int64  `json:"id"`
+	LocationFrom   string `json:"locationFrom"`
+	LocationTo     string `json:"locationTo"`
+	TackingPlaceAt string `json:"tackingPlaceAt"`
+	CreateBy       string `json:"createBy"`
+	Driver         string `json:"driver"`
+}
+
+type RideParticipant struct {
+	UserID string `json:"userId"`
+	RideID int64  `json:"rideId"`
+}
+
 type User struct {
 	ID           string         `json:"id"`
 	Name         string         `json:"name"`
