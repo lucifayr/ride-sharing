@@ -3,7 +3,6 @@ package rest
 import (
 	"context"
 	"net/http"
-	"ride_sharing_api/app/simulator"
 	sqlc "ride_sharing_api/app/sqlc"
 	"sync"
 	"time"
@@ -33,7 +32,7 @@ type middlewareData struct {
 func NewRESTApi(queries *sqlc.Queries) http.Handler {
 	state = &apiState{oauthStates: make(map[string]time.Time), queries: queries}
 
-	mux := simulator.S.HttpNewServerMux()
+	mux := http.NewServeMux()
 	authHandlers(mux)
 	authHandlersGoogle(mux)
 	userHandlers(mux)

@@ -1,23 +1,22 @@
 package main
 
 import (
+	"database/sql"
 	"log"
+	"net/http"
 
 	"ride_sharing_api"
 	"ride_sharing_api/app/common"
 	"ride_sharing_api/app/database/migrations"
 	"ride_sharing_api/app/rest"
-	"ride_sharing_api/app/simulator"
 	sqlc "ride_sharing_api/app/sqlc"
 	"ride_sharing_api/app/utils"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var S simulator.Simulator
-
 func main() {
-	dbFile := simulator.S.DbName()
+	dbFile := utils.GetEnvRequired(common.ENV_DB_NAME)
 	err := utils.CreateDbFileIfNotExists(dbFile)
 	if err != nil {
 		log.Fatalln("Failed to create database file.", dbFile, err)
@@ -29,7 +28,13 @@ func main() {
 	}
 
 	handler := rest.NewRESTApi(sqlc.New(db))
-	err = simulator.S.HttpListenAndServe(handler, simulator.S.GetEnvRequired(common.ENV_HOST_ADDR))
+	server := &http.Server{
+		Addr:    utils.GetEnvRequired(common.ENV_HOST_ADDR),
+		Handler: handler,
+	}
+
+	log.Println("Listening on", server.Addr)
+	err = server.ListenAndServe()
 	if err != nil {
 		log.Fatalln(err)
 	} else {
@@ -37,8 +42,8 @@ func main() {
 	}
 }
 
-func initDb(dbFile string) (simulator.DB, error) {
-	db, err := simulator.S.SqlOpen("sqlite3", "file:"+dbFile)
+func initDb(dbFile string) (*sql.DB, error) {
+	db, err := sql.Open("sqlite3", "file:"+dbFile)
 	if err != nil {
 		return nil, err
 	}

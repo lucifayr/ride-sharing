@@ -4,11 +4,10 @@ import (
 	"encoding/json"
 	"net/http"
 	"ride_sharing_api/app/assert"
-	"ride_sharing_api/app/simulator"
 	"ride_sharing_api/app/sqlc"
 )
 
-func userHandlers(h simulator.HTTPMux) {
+func userHandlers(h *http.ServeMux) {
 	h.HandleFunc("GET /users", handle(getUserById).with(bearerAuth(false)).build())
 }
 

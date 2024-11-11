@@ -5,13 +5,12 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"ride_sharing_api/app/simulator"
 	"ride_sharing_api/app/sqlc"
 	"ride_sharing_api/app/utils"
 	"time"
 )
 
-func rideHandlers(h simulator.HTTPMux) {
+func rideHandlers(h *http.ServeMux) {
 	h.HandleFunc("POST /rides", handle(createRide).with(bearerAuth(false)).build())
 }
 

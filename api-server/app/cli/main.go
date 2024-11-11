@@ -12,8 +12,8 @@ import (
 	"time"
 
 	embeddings "ride_sharing_api"
+	"ride_sharing_api/app/common"
 	"ride_sharing_api/app/database/migrations"
-	"ride_sharing_api/app/simulator"
 	utils "ride_sharing_api/app/utils"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -150,7 +150,7 @@ func parseCreateMigrationFlags(args []string) map[string]any {
 }
 
 func setupDb() *sql.DB {
-	dbFile := simulator.S.DbName()
+	dbFile := utils.GetEnvRequired(common.ENV_DB_NAME)
 	err := utils.CreateDbFileIfNotExists(dbFile)
 	if err != nil {
 		log.Fatalln("Failed to create database file.", dbFile, err)

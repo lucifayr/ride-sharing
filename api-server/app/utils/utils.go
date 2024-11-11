@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"os"
-	"ride_sharing_api/app/simulator"
+	"ride_sharing_api/app/assert"
 
 	"github.com/go-playground/validator/v10"
 )
@@ -31,19 +31,23 @@ func IdxOf[T comparable](slice []T, predicate func(item T) bool) int {
 	return -1
 }
 
+func GetEnvRequired(key string) string {
+	val, exists := os.LookupEnv(key)
+	assert.True(exists, "Required environment variable isn't set.", "key:", key)
+	return val
+}
+
 func FileExists(path string) bool {
-	_, err := simulator.S.FsStat(path)
+	_, err := os.Stat(path)
 	return !errors.Is(err, os.ErrNotExist)
 }
 
 func CreateDbFileIfNotExists(path string) error {
-	_, err := simulator.S.FsStat(path)
-
-	if !errors.Is(err, os.ErrNotExist) {
+	if FileExists(path) {
 		return nil
 	}
 
-	f, err := simulator.S.FsCreate(path)
+	f, err := os.Create(path)
 	f.Close()
 
 	return err

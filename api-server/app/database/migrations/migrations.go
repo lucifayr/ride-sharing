@@ -1,12 +1,12 @@
 package migrations
 
 import (
+	"database/sql"
 	"embed"
 	"fmt"
 	"log"
 	"path"
 	"ride_sharing_api/app/assert"
-	"ride_sharing_api/app/simulator"
 	"slices"
 	"sort"
 	"strings"
@@ -119,7 +119,7 @@ func FromEmbedFs(fs embed.FS, root string) Migrations {
 	return Migrations{migrationSourceTexts: migrations}
 }
 
-func (migrations *Migrations) Up(db simulator.DB) {
+func (migrations *Migrations) Up(db *sql.DB) {
 	for _, mig := range migrations.migrationSourceTexts {
 		sqlVal := mig.sql[MigrationKindValidate]
 		_, err := db.Exec(sqlVal)
@@ -138,7 +138,7 @@ func (migrations *Migrations) Up(db simulator.DB) {
 	}
 }
 
-func (migrations *Migrations) Down(db simulator.DB) {
+func (migrations *Migrations) Down(db *sql.DB) {
 	for idx := range migrations.migrationSourceTexts {
 		mig := migrations.migrationSourceTexts[len(migrations.migrationSourceTexts)-(idx+1)]
 
@@ -152,7 +152,7 @@ func (migrations *Migrations) Down(db simulator.DB) {
 	}
 }
 
-func runMigration(db simulator.DB, sql string) error {
+func runMigration(db *sql.DB, sql string) error {
 	res, err := db.Exec(sql)
 	if err != nil {
 		return err

@@ -10,6 +10,7 @@ pkgs.mkShell {
   ];
 
   # env vars
+  RS_DB_NAME = "rides.db";
   RS_HOST_ADDR = "127.0.0.1:8000";
   RS_WEB_APP_ADDR = "127.0.0.1:5173";
   RS_SECRET_AUTH_TOKEN = "super-secret-fake-token";

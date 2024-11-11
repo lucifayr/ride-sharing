@@ -13,7 +13,6 @@ import (
 	"net/http"
 	"ride_sharing_api/app/assert"
 	"ride_sharing_api/app/common"
-	"ride_sharing_api/app/simulator"
 	"ride_sharing_api/app/sqlc"
 	"ride_sharing_api/app/utils"
 	"time"
@@ -24,7 +23,7 @@ const (
 	AUTH_PROVIDER_MICROSOFT = "microsoft"
 )
 
-var clientUrlAuth = simulator.S.GetEnvRequired(common.ENV_WEB_APP_ADDR) + "/authenticate"
+var clientUrlAuth = utils.GetEnvRequired(common.ENV_WEB_APP_ADDR) + "/authenticate"
 
 type authTokens struct {
 	AccessToken  string `json:"accessToken"`
@@ -38,7 +37,7 @@ type accessToken struct {
 	ExpiresAt time.Time `json:"expiresAt" validate:"required"`
 }
 
-func authHandlers(h simulator.HTTPMux) {
+func authHandlers(h *http.ServeMux) {
 	h.HandleFunc("POST /auth/refresh", handle(refreshAuthTokens).with(bearerAuth(true)).build())
 }
 
@@ -110,7 +109,7 @@ func encodeAccessToken(userId string, email string) string {
 	plain, err := json.Marshal(at)
 	assert.True(err == nil, "Invalid token JSON.", "access-token:", at, "error", func() any { return err.Error() })
 
-	ciphertext, err := encrypt(plain, []byte(simulator.S.GetEnvRequired(common.ENV_SECRET_AUTH_TOKEN)))
+	ciphertext, err := encrypt(plain, []byte(utils.GetEnvRequired(common.ENV_SECRET_AUTH_TOKEN)))
 	assert.True(err == nil, "Encryption error on server defined data.", "error:", func() any { return err.Error() })
 
 	return base64.URLEncoding.EncodeToString(ciphertext)
@@ -122,7 +121,7 @@ func decodeAccessToken(token []byte) (*accessToken, error) {
 		return nil, err
 	}
 
-	plain, err := decrypt(token, []byte(simulator.S.GetEnvRequired(common.ENV_SECRET_AUTH_TOKEN)))
+	plain, err := decrypt(token, []byte(utils.GetEnvRequired(common.ENV_SECRET_AUTH_TOKEN)))
 	if err != nil {
 		return nil, err
 	}
@@ -185,6 +184,6 @@ func decrypt(ciphertext []byte, key []byte) ([]byte, error) {
 
 func genRandBase64(size int) string {
 	b := make([]byte, size)
-	simulator.S.RandCrypto(b)
+	rand.Read(b)
 	return base64.URLEncoding.EncodeToString(b)
 }

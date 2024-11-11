@@ -1,6 +1,7 @@
 package common
 
 const (
+	ENV_DB_NAME              = "RS_DB_NAME"
 	ENV_HOST_ADDR            = "RS_HOST_ADDR"
 	ENV_WEB_APP_ADDR         = "RS_WEB_APP_ADDR"
 	ENV_SECRET_AUTH_TOKEN    = "RS_SECRET_AUTH_TOKEN"

@@ -9,7 +9,6 @@ import (
 	"log"
 	"net/http"
 	"ride_sharing_api/app/common"
-	"ride_sharing_api/app/simulator"
 	"ride_sharing_api/app/sqlc"
 	"ride_sharing_api/app/utils"
 	"time"
@@ -24,9 +23,9 @@ import (
 const oauthUrlAPIGoogle = "https://www.googleapis.com/oauth2/v2/userinfo?access_token="
 
 var googleOauthConfig = &oauth2.Config{
-	RedirectURL:  simulator.S.GetEnvRequired(common.ENV_HOST_ADDR) + "/auth/google/callback",
-	ClientID:     simulator.S.GetEnvRequired(common.ENV_GOOGLE_CLIENT_ID),
-	ClientSecret: simulator.S.GetEnvRequired(common.ENV_GOOGLE_CLIENT_SECRET),
+	RedirectURL:  utils.GetEnvRequired(common.ENV_HOST_ADDR) + "/auth/google/callback",
+	ClientID:     utils.GetEnvRequired(common.ENV_GOOGLE_CLIENT_ID),
+	ClientSecret: utils.GetEnvRequired(common.ENV_GOOGLE_CLIENT_SECRET),
 	Scopes: []string{
 		"https://www.googleapis.com/auth/userinfo.email",
 		"https://www.googleapis.com/auth/userinfo.profile",
@@ -34,7 +33,7 @@ var googleOauthConfig = &oauth2.Config{
 	Endpoint: google.Endpoint,
 }
 
-func authHandlersGoogle(h simulator.HTTPMux) {
+func authHandlersGoogle(h *http.ServeMux) {
 	h.HandleFunc("GET /auth/google/login", oauthLoginGoogle)
 	h.HandleFunc("GET /auth/google/callback", oauthCallbackGoogle)
 }
@@ -47,7 +46,7 @@ func oauthLoginGoogle(w http.ResponseWriter, r *http.Request) {
 	state.mutex.Unlock()
 
 	url := googleOauthConfig.AuthCodeURL(oauthState, oauth2.AccessTypeOffline, oauth2.ApprovalForce)
-	simulator.S.HttpRedirect(w, r, url, http.StatusTemporaryRedirect)
+	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
 func oauthCallbackGoogle(w http.ResponseWriter, r *http.Request) {
@@ -102,7 +101,7 @@ func oauthCallbackGoogle(w http.ResponseWriter, r *http.Request) {
 		}
 
 		url := fmt.Sprintf("%s?accessToken=%s&refreshToken=%s", clientUrlAuth, tokens.AccessToken, tokens.RefreshToken)
-		simulator.S.HttpRedirect(w, r, url, http.StatusTemporaryRedirect)
+		http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 		return
 	} else if err != nil {
 		log.Println("Error: Failed to get user from database.", err.Error(), "user id:", *profile.Id, "user email:", *profile.Email)
@@ -133,18 +132,18 @@ func oauthCallbackGoogle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	url := fmt.Sprintf("%s?accessToken=%s&refreshToken=%s", clientUrlAuth, tokens.AccessToken, tokens.RefreshToken)
-	simulator.S.HttpRedirect(w, r, url, http.StatusTemporaryRedirect)
+	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
 func getUserProfileFromGoogle(ctx context.Context, code string) (*common.GoogleProfile, error) {
-	token, err := simulator.S.OauthGoogleExchangeCode(ctx, googleOauthConfig, code)
+	token, err := googleOauthConfig.Exchange(ctx, code)
 	if err != nil {
 		log.Println("Error: Failed to exchange google auth codes.", err.Error())
 		return nil, fmt.Errorf("Error during code exchange. Make sure this request was started from '/auth/google/login'.")
 	}
 
 	url := oauthUrlAPIGoogle + token.AccessToken
-	response, err := simulator.S.HttpGet(url)
+	response, err := http.Get(url)
 	if err != nil {
 		log.Println("Error: Failed to get google user info.", err.Error(), "url:", url)
 		return nil, fmt.Errorf("Failed to get user info. This might be an issue with the Google Oauth configuration.")
