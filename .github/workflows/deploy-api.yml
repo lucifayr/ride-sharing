@@ -1,0 +1,13 @@
+name: Deploy API
+on:
+  workflow_dispatch:
+jobs:
+  validate:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: Deploy
+        when: manual
+        run:
+          - ./deployment/ci/update-start.sh "$ADDR_VPS_1" "$TARGET_NAME_SITE" "$TARGET_KEY_SITE" "$CI_COMMIT_SHA"
+          - ./deployment/ci/update-wait-for-done.sh "$ADDR_VPS_1" "$TARGET_NAME_SITE" "$TARGET_KEY_SITE" "$CI_JOB_ID"

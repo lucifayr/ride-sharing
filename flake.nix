@@ -9,17 +9,25 @@
       pkgs = import nixpkgs {
         inherit system;
       };
-      packageLock = builtins.fromJSON (builtins.readFile (./. + "/package-lock.json"));
+      packageLock = builtins.fromJSON (builtins.readFile (./web-app + "/package-lock.json"));
     in
     {
       packages.${system} = {
+        api = pkgs.buildGoModule rec {
+          name = "api";
+          version = "0.0.0";
+          src = ./api-server;
+          vendorHash = null;
+          subPackages = [ "./app/main.go" ];
+        };
+
         web-app = pkgs.buildNpmPackage
           {
             pname = "${packageLock.name}";
             version = "${packageLock.version}";
-            src = ./.;
+            src = ./web-app;
             npmDeps = pkgs.importNpmLock {
-              npmRoot = ./.;
+              npmRoot = ./web-app;
             };
             npmConfigHook = pkgs.importNpmLock.npmConfigHook;
             installPhase = ''

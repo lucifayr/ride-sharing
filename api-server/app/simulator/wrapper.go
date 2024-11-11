@@ -57,7 +57,7 @@ func (b *simulatorWrapper) AlwaysPassGoogleOauth() {
 			state := strings.Split(url, "state=")[1]
 			state = strings.Split(state, "&")[0]
 
-			callbackUrl := "http://127.0.0.1:8000/auth/google/callback?state=" + state
+			callbackUrl := b.GetEnvRequired(common.ENV_HOST_ADDR) + "/auth/google/callback?state=" + state
 			b.base.HttpRedirect(w, r, callbackUrl, code)
 			return
 		}
@@ -145,8 +145,15 @@ func (b *simulatorWrapper) LogOutput() io.Writer {
 	if b.overrideLogOutput != nil {
 		return *b.overrideLogOutput
 	}
-
 	return b.base.LogOutput()
+}
+
+func (b *simulatorWrapper) GetEnv(key string) string {
+	return b.base.GetEnv(key)
+}
+
+func (b *simulatorWrapper) GetEnvRequired(key string) string {
+	return b.base.GetEnvRequired(key)
 }
 
 func (b *simulatorWrapper) SqlOpen(driverName string, dataSourceName string) (DB, error) {

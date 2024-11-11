@@ -12,6 +12,7 @@ import (
 	"log"
 	"net/http"
 	"ride_sharing_api/app/assert"
+	"ride_sharing_api/app/common"
 	"ride_sharing_api/app/simulator"
 	"ride_sharing_api/app/sqlc"
 	"ride_sharing_api/app/utils"
@@ -23,7 +24,7 @@ const (
 	AUTH_PROVIDER_MICROSOFT = "microsoft"
 )
 
-const clientUrlAuth = "http://127.0.0.1:5173/authenticate"
+var clientUrlAuth = simulator.S.GetEnvRequired(common.ENV_WEB_APP_ADDR) + "/authenticate"
 
 type authTokens struct {
 	AccessToken  string `json:"accessToken"`
@@ -36,12 +37,6 @@ type accessToken struct {
 	Random    *string   `json:"random" validate:"required"`
 	ExpiresAt time.Time `json:"expiresAt" validate:"required"`
 }
-
-// TODO: change and move into ENV
-
-// Must be 32 bytes long!
-const authTokenEncodingSecretKey = "268aTvg3uNE*xLkB7tYSW%Cl#CmuY5!L"
-const authStateEncodingSecretKey = "@j&P4m$Fcq$en*C75six#9dbNBDijJgU"
 
 func authHandlers(h simulator.HTTPMux) {
 	h.HandleFunc("POST /auth/refresh", handle(refreshAuthTokens).with(bearerAuth(true)).build())
@@ -115,7 +110,7 @@ func encodeAccessToken(userId string, email string) string {
 	plain, err := json.Marshal(at)
 	assert.True(err == nil, "Invalid token JSON.", "access-token:", at, "error", func() any { return err.Error() })
 
-	ciphertext, err := encrypt(plain, []byte(authTokenEncodingSecretKey))
+	ciphertext, err := encrypt(plain, []byte(simulator.S.GetEnvRequired(common.ENV_SECRET_AUTH_TOKEN)))
 	assert.True(err == nil, "Encryption error on server defined data.", "error:", func() any { return err.Error() })
 
 	return base64.URLEncoding.EncodeToString(ciphertext)
@@ -127,7 +122,7 @@ func decodeAccessToken(token []byte) (*accessToken, error) {
 		return nil, err
 	}
 
-	plain, err := decrypt(token, []byte(authTokenEncodingSecretKey))
+	plain, err := decrypt(token, []byte(simulator.S.GetEnvRequired(common.ENV_SECRET_AUTH_TOKEN)))
 	if err != nil {
 		return nil, err
 	}

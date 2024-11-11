@@ -26,6 +26,12 @@ type Simulator interface {
 	// `log.SetOutput(Simulator.LogOutput())` on application startup.
 	LogOutput() io.Writer
 
+	// Gets an environment variable. Returns "" if the variable is not set.
+	GetEnv(key string) string
+
+	// Gets an environment variable or panics if it is not set.
+	GetEnvRequired(key string) string
+
 	// Open opens a database specified by its database driver name and a
 	// driver-specific data source name, usually consisting of at least a
 	// database name and connection information.

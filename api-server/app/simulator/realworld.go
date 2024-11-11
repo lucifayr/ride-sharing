@@ -72,6 +72,16 @@ func (s *SimulatorRealWorld) LogOutput() io.Writer {
 	return os.Stdout
 }
 
+func (s *SimulatorRealWorld) GetEnv(key string) string {
+	return os.Getenv(key)
+}
+
+func (s *SimulatorRealWorld) GetEnvRequired(key string) string {
+	val, exists := os.LookupEnv(key)
+	assert.True(exists, "Required environment variable is not set.", "key:", key)
+	return val
+}
+
 func (s *SimulatorRealWorld) DbName() string {
 	return "rides.db"
 }

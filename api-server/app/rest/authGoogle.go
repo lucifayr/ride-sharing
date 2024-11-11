@@ -3,7 +3,6 @@ package rest
 import (
 	"context"
 	"database/sql"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -22,14 +21,12 @@ import (
 // Google config:
 // https://console.cloud.google.com/auth/clients?highlightClient=750385423567-rsrv4dknuvrts9rv5neab3dl667r5la6.apps.googleusercontent.com&authuser=2&organizationId=0&project=htl-ride-sharing
 
-// TODO: change secrets and put them in ENV
-
 const oauthUrlAPIGoogle = "https://www.googleapis.com/oauth2/v2/userinfo?access_token="
 
 var googleOauthConfig = &oauth2.Config{
-	RedirectURL:  "http://127.0.0.1:8000/auth/google/callback",
-	ClientID:     "750385423567-rsrv4dknuvrts9rv5neab3dl667r5la6.apps.googleusercontent.com",
-	ClientSecret: "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",
+	RedirectURL:  simulator.S.GetEnvRequired(common.ENV_HOST_ADDR) + "/auth/google/callback",
+	ClientID:     simulator.S.GetEnvRequired(common.ENV_GOOGLE_CLIENT_ID),
+	ClientSecret: simulator.S.GetEnvRequired(common.ENV_GOOGLE_CLIENT_SECRET),
 	Scopes: []string{
 		"https://www.googleapis.com/auth/userinfo.email",
 		"https://www.googleapis.com/auth/userinfo.profile",
@@ -43,14 +40,7 @@ func authHandlersGoogle(h simulator.HTTPMux) {
 }
 
 func oauthLoginGoogle(w http.ResponseWriter, r *http.Request) {
-	oauthStateBytes, err := encrypt([]byte(genRandBase64(32)), []byte(authStateEncodingSecretKey))
-	if err != nil {
-		log.Println("Error: Failed to encrypt oauth state.", "error:", err)
-		http.Error(w, "Failed to redirect to authentication provider.", http.StatusInternalServerError)
-		return
-	}
-
-	oauthState := base64.URLEncoding.EncodeToString(oauthStateBytes)
+	oauthState := genRandBase64(64)
 
 	state.mutex.Lock()
 	state.oauthStates[oauthState] = time.Now()

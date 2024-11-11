@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"ride_sharing_api"
+	"ride_sharing_api/app/common"
 	"ride_sharing_api/app/database/migrations"
 	"ride_sharing_api/app/rest"
 	"ride_sharing_api/app/simulator"
@@ -28,7 +29,7 @@ func main() {
 	}
 
 	handler := rest.NewRESTApi(sqlc.New(db))
-	err = simulator.S.HttpListenAndServe(handler, "127.0.0.1:8000")
+	err = simulator.S.HttpListenAndServe(handler, simulator.S.GetEnvRequired(common.ENV_HOST_ADDR))
 	if err != nil {
 		log.Fatalln(err)
 	} else {
