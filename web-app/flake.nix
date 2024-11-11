@@ -9,13 +9,19 @@
       pkgs = import nixpkgs {
         inherit system;
       };
+      packageLock = builtins.fromJSON (builtins.readFile (./. + "/package-lock.json"));
     in
     {
       packages.${system} = {
         web-app = pkgs.buildNpmPackage
           {
-            name = "web-app";
-            src = self;
+            pname = "${packageLock.name}";
+            version = "${packageLock.version}";
+            src = ./.;
+            npmDeps = pkgs.importNpmLock {
+              npmRoot = ./.;
+            };
+            npmConfigHook = pkgs.importNpmLock.npmConfigHook;
             installPhase = ''
               mkdir $out
               npm run build
