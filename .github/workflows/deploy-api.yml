@@ -1,7 +1,7 @@
 name: Deploy API
 on: workflow_dispatch
 jobs:
-  validate:
+  deploy:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
