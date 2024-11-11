@@ -1,0 +1,13 @@
+name: Deploy Web App
+on: workflow_dispatch
+jobs:
+  deploy:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: Deploy
+        env:
+          ADDR_VPS_1: ${{ vars.ADDR_VPS_1 }}
+          TARGET_NAME_WEB_APP: ${{ vars.TARGET_NAME_WEB_APP }}
+          TARGET_KEY_WEB_APP: ${{ secrets.TARGET_KEY_WEB_APP }}
+        run: ./deployment/ci/update-start.sh "$ADDR_VPS_1" "$TARGET_NAME_WEB_APP" "$TARGET_KEY_WEB_APP" "$GITHUB_SHA" && ./deployment/ci/update-wait-for-done.sh "$ADDR_VPS_1" "$TARGET_NAME_WEB_APP" "$TARGET_KEY_WEB_APP" "$GITHUB_JOB"
