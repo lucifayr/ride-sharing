@@ -6,7 +6,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Deploy
-        when: manual
         env:
           ADDR_VPS_1: ${{ vars.ADDR_VPS_1 }}
           TARGET_NAME_API: ${{ vars.TARGET_NAME_API }}
