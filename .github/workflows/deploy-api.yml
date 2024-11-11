@@ -7,6 +7,10 @@ jobs:
       - uses: actions/checkout@v3
       - name: Deploy
         when: manual
+        env:
+          ADDR_VPS_1: ${{ vars.ADDR_VPS_1 }}
+          TARGET_NAME_API: ${{ vars.TARGET_NAME_API }}
+          TARGET_KEY_API: ${{ secrets.TARGET_KEY_API }}
         run:
-          - ./deployment/ci/update-start.sh "$ADDR_VPS_1" "$TARGET_NAME_SITE" "$TARGET_KEY_SITE" "$CI_COMMIT_SHA"
-          - ./deployment/ci/update-wait-for-done.sh "$ADDR_VPS_1" "$TARGET_NAME_SITE" "$TARGET_KEY_SITE" "$CI_JOB_ID"
+          - ./deployment/ci/update-start.sh "$ADDR_VPS_1" "$TARGET_NAME_API" "$TARGET_KEY_API" "$GITHUB_SHA"
+          - ./deployment/ci/update-wait-for-done.sh "$ADDR_VPS_1" "$TARGET_NAME_API" "$TARGET_KEY_API" "$GITHUB_JOB"
