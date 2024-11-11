@@ -6,6 +6,7 @@ Type=simple
 User=root
 Restart=on-failure
 RestartSec=3
+Environment=RS_DB_NAME="<VALUE>"
 Environment=RS_HOST_ADDR="<VALUE>"
 Environment=RS_WEB_APP_ADDR="<VALUE>"
 Environment=RS_SECRET_AUTH_TOKEN="<VALUE>"
