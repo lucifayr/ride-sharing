@@ -1,3 +1,4 @@
-systemctl --user daemon-reload
-systemctl --user start ride-sharing-api.service
-systemctl --user restart ride-sharing-api.service
+cp --force deployment/ride-sharing-api.service /etc/systemd/system/
+systemctl daemon-reload
+systemctl start ride-sharing-api.service
+systemctl restart ride-sharing-api.service
