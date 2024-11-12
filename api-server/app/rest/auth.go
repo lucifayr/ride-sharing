@@ -23,7 +23,7 @@ const (
 	AUTH_PROVIDER_MICROSOFT = "microsoft"
 )
 
-var clientUrlAuth = utils.GetEnvRequired(common.ENV_WEB_APP_ADDR) + "/authenticate"
+var clientUrlAuth = utils.GetEnvRequired(common.ENV_WEB_APP_URL) + "/authenticate"
 
 type authTokens struct {
 	AccessToken  string `json:"accessToken"`

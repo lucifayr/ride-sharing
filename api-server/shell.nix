@@ -12,9 +12,9 @@ pkgs.mkShell {
   # env vars
   RS_DB_NAME = "rides.db";
   RS_HOST_ADDR = "127.0.0.1:8000";
-  RS_WEB_APP_ADDR = "127.0.0.1:5173";
-  RS_SECRET_AUTH_TOKEN = "super-secret-fake-token";
+  RS_WEB_APP_URL = "http://127.0.0.1:5173";
+  RS_SECRET_AUTH_TOKEN = "03**CsL@pfFmtt5K4LE*SVYXPseFZ^FO";
   # dev-only client id & secret
-  RS_GOOGLE_CLIENT_ID = "750385423567-rsrv4dknuvrts9rv5neab3dl667r5la6.apps.googleusercontent.com";
-  RS_GOOGLE_CLIENT_SECRET = "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";
+  RS_GOOGLE_CLIENT_ID = "750385423567-8vu2cst8njm4d6ple8e424ltpd9dh9t2.apps.googleusercontent.com";
+  RS_GOOGLE_CLIENT_SECRET = "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";
 }

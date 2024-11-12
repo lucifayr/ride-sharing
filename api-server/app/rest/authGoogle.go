@@ -23,7 +23,7 @@ import (
 const oauthUrlAPIGoogle = "https://www.googleapis.com/oauth2/v2/userinfo?access_token="
 
 var googleOauthConfig = &oauth2.Config{
-	RedirectURL:  utils.GetEnvRequired(common.ENV_HOST_ADDR) + "/auth/google/callback",
+	RedirectURL:  "http://" + utils.GetEnvRequired(common.ENV_HOST_ADDR) + "/auth/google/callback",
 	ClientID:     utils.GetEnvRequired(common.ENV_GOOGLE_CLIENT_ID),
 	ClientSecret: utils.GetEnvRequired(common.ENV_GOOGLE_CLIENT_SECRET),
 	Scopes: []string{
@@ -45,6 +45,7 @@ func oauthLoginGoogle(w http.ResponseWriter, r *http.Request) {
 	state.oauthStates[oauthState] = time.Now()
 	state.mutex.Unlock()
 
+	log.Println(googleOauthConfig.RedirectURL)
 	url := googleOauthConfig.AuthCodeURL(oauthState, oauth2.AccessTypeOffline, oauth2.ApprovalForce)
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
