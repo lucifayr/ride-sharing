@@ -23,7 +23,7 @@ import (
 const oauthUrlAPIGoogle = "https://www.googleapis.com/oauth2/v2/userinfo?access_token="
 
 var googleOauthConfig = &oauth2.Config{
-	RedirectURL:  "http://" + utils.GetEnvRequired(common.ENV_HOST_ADDR) + "/auth/google/callback",
+	RedirectURL:  utils.GetEnvRequired(common.ENV_GOOGLE_REDIRECT_URL),
 	ClientID:     utils.GetEnvRequired(common.ENV_GOOGLE_CLIENT_ID),
 	ClientSecret: utils.GetEnvRequired(common.ENV_GOOGLE_CLIENT_SECRET),
 	Scopes: []string{
