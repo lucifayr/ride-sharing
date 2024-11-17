@@ -4,15 +4,21 @@ import (
 	"log"
 )
 
+func Nil(value any, msgs ...any) {
+	if value != nil {
+		log.Panicln(append([]any{"Assertion Failed - Value must be 'nil' but received:", value}, resolveMsgs(msgs)...)...)
+	}
+}
+
 func True(condition bool, msgs ...any) {
 	if !condition {
-		log.Fatalln(append([]any{"Assertion Failed!"}, resolveMsgs(msgs)...)...)
+		log.Panicln(append([]any{"Assertion Failed!"}, resolveMsgs(msgs)...)...)
 	}
 }
 
 func False(condition bool, msgs ...any) {
 	if condition {
-		log.Fatalln(append([]any{"Assertion Failed!"}, resolveMsgs(msgs)...)...)
+		log.Panicln(append([]any{"Assertion Failed!"}, resolveMsgs(msgs)...)...)
 	}
 }
 

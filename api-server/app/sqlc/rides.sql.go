@@ -15,18 +15,18 @@ INSERT INTO
         location_from,
         location_to,
         tacking_place_at,
-        create_by,
+        created_by,
         driver
     )
 VALUES
-    (?, ?, ?, ?, ?) RETURNING id, location_from, location_to, tacking_place_at, create_by, driver
+    (?, ?, ?, ?, ?) RETURNING id, location_from, location_to, tacking_place_at, created_by, driver
 `
 
 type RidesCreateParams struct {
 	LocationFrom   string `json:"locationFrom"`
 	LocationTo     string `json:"locationTo"`
 	TackingPlaceAt string `json:"tackingPlaceAt"`
-	CreateBy       string `json:"createBy"`
+	CreatedBy      string `json:"createdBy"`
 	Driver         string `json:"driver"`
 }
 
@@ -37,7 +37,7 @@ func (q *Queries) RidesCreate(ctx context.Context, arg RidesCreateParams) (Ride,
 		arg.LocationFrom,
 		arg.LocationTo,
 		arg.TackingPlaceAt,
-		arg.CreateBy,
+		arg.CreatedBy,
 		arg.Driver,
 	)
 	var i Ride
@@ -46,7 +46,7 @@ func (q *Queries) RidesCreate(ctx context.Context, arg RidesCreateParams) (Ride,
 		&i.LocationFrom,
 		&i.LocationTo,
 		&i.TackingPlaceAt,
-		&i.CreateBy,
+		&i.CreatedBy,
 		&i.Driver,
 	)
 	return i, err

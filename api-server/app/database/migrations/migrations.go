@@ -132,9 +132,7 @@ func (migrations *Migrations) Up(db *sql.DB) {
 
 		log.Printf("Running migration [%s] : %s\n", MigrationKindUp, mig.name)
 		err = runMigration(db, sql)
-		if err != nil {
-			log.Println("Migration failed.", "name", mig.name, "error", err)
-		}
+		assert.Nil(err, "Migration failed.", "name", mig.name)
 	}
 }
 
@@ -146,9 +144,7 @@ func (migrations *Migrations) Down(db *sql.DB) {
 
 		log.Printf("Running migration [%s] : %s\n", MigrationKindDown, mig.name)
 		err := runMigration(db, sql)
-		if err != nil {
-			log.Println("Migration failed.", "name", mig.name, "error", err)
-		}
+		assert.Nil(err, "Migration failed.", "name", mig.name)
 	}
 }
 

@@ -4,7 +4,12 @@ import (
 	"database/sql"
 	"errors"
 	"os"
+	"path"
+	"path/filepath"
+	embeddings "ride_sharing_api"
 	"ride_sharing_api/app/assert"
+	"ride_sharing_api/app/database/migrations"
+	"runtime"
 
 	"github.com/go-playground/validator/v10"
 )
@@ -39,7 +44,11 @@ func GetEnvRequired(key string) string {
 
 func FileExists(path string) bool {
 	_, err := os.Stat(path)
-	return !errors.Is(err, os.ErrNotExist)
+	if err == nil {
+		return true
+	}
+
+	return !(errors.Is(err, os.ErrNotExist) || errors.Is(err, os.ErrPermission))
 }
 
 func CreateDbFileIfNotExists(path string) error {
@@ -55,4 +64,31 @@ func CreateDbFileIfNotExists(path string) error {
 
 func SqlNullStr(str string) sql.NullString {
 	return sql.NullString{String: str, Valid: true}
+}
+
+func InitDb(dbFile string) (*sql.DB, error) {
+	db, err := sql.Open("sqlite3", "file:"+dbFile)
+	if err != nil {
+		return nil, err
+	}
+
+	err = db.Ping()
+	if err != nil {
+		return nil, err
+	}
+
+	m := migrations.FromEmbedFs(embeddings.DbMigrations, "db/migrations")
+	m.Up(db)
+
+	return db, nil
+}
+
+var (
+	_, b, _, _ = runtime.Caller(0)
+	basepath   = filepath.Dir(b)
+)
+
+func ProjectRoot() string {
+	// `basepath` is always relative to utils.go path
+	return path.Join(basepath, "../..")
 }

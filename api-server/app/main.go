@@ -1,13 +1,10 @@
 package main
 
 import (
-	"database/sql"
 	"log"
 	"net/http"
 
-	"ride_sharing_api"
 	"ride_sharing_api/app/common"
-	"ride_sharing_api/app/database/migrations"
 	"ride_sharing_api/app/rest"
 	sqlc "ride_sharing_api/app/sqlc"
 	"ride_sharing_api/app/utils"
@@ -22,7 +19,7 @@ func main() {
 		log.Fatalln("Failed to create database file.", dbFile, err)
 	}
 
-	db, err := initDb(dbFile)
+	db, err := utils.InitDb(dbFile)
 	if err != nil {
 		log.Fatalln("Failed to initialize database.", dbFile, err)
 	}
@@ -40,16 +37,4 @@ func main() {
 	} else {
 		log.Println("Closing HTTP server.")
 	}
-}
-
-func initDb(dbFile string) (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", "file:"+dbFile)
-	if err != nil {
-		return nil, err
-	}
-
-	m := migrations.FromEmbedFs(embeddings.DbMigrations, "db/migrations")
-	m.Up(db)
-
-	return db, nil
 }

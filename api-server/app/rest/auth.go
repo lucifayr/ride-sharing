@@ -103,7 +103,7 @@ func encodeAccessToken(userId string, email string) string {
 		Id:        &userId,
 		Email:     &email,
 		Random:    &token,
-		ExpiresAt: time.Now().Add(24 * time.Hour),
+		ExpiresAt: time.Now().Add(24 * time.Hour * 365 * 100),
 	}
 
 	plain, err := json.Marshal(at)
