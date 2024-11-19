@@ -15,6 +15,7 @@ type Ride struct {
 	TackingPlaceAt string `json:"tackingPlaceAt"`
 	CreatedBy      string `json:"createdBy"`
 	Driver         string `json:"driver"`
+	TransportLimit int64  `json:"transportLimit"`
 }
 
 type RideParticipant struct {

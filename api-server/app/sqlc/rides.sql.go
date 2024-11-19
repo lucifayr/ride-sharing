@@ -16,10 +16,11 @@ INSERT INTO
         location_to,
         tacking_place_at,
         created_by,
-        driver
+        driver,
+        transport_limit
     )
 VALUES
-    (?, ?, ?, ?, ?) RETURNING id, location_from, location_to, tacking_place_at, created_by, driver
+    (?, ?, ?, ?, ?, ?) RETURNING id, location_from, location_to, tacking_place_at, created_by, driver, transport_limit
 `
 
 type RidesCreateParams struct {
@@ -28,6 +29,7 @@ type RidesCreateParams struct {
 	TackingPlaceAt string `json:"tackingPlaceAt"`
 	CreatedBy      string `json:"createdBy"`
 	Driver         string `json:"driver"`
+	TransportLimit int64  `json:"transportLimit"`
 }
 
 // See sqlc docs for more information:
@@ -39,6 +41,7 @@ func (q *Queries) RidesCreate(ctx context.Context, arg RidesCreateParams) (Ride,
 		arg.TackingPlaceAt,
 		arg.CreatedBy,
 		arg.Driver,
+		arg.TransportLimit,
 	)
 	var i Ride
 	err := row.Scan(
@@ -48,6 +51,7 @@ func (q *Queries) RidesCreate(ctx context.Context, arg RidesCreateParams) (Ride,
 		&i.TackingPlaceAt,
 		&i.CreatedBy,
 		&i.Driver,
+		&i.TransportLimit,
 	)
 	return i, err
 }

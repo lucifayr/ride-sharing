@@ -8,7 +8,8 @@ INSERT INTO
         location_to,
         tacking_place_at,
         created_by,
-        driver
+        driver,
+        transport_limit
     )
 VALUES
-    (?, ?, ?, ?, ?) RETURNING *;
+    (?, ?, ?, ?, ?, ?) RETURNING *;
