@@ -1,3 +1,4 @@
+import { RideGroup, ScheduledRideGroup } from "./models/models";
 import { User } from "./models/user";
 import { create } from "zustand";
 
@@ -16,6 +17,16 @@ type AuthStore = {
   setTokens: (tokens: AuthTokens) => void;
 };
 
+type ScheduledRideGroupsStore = {
+  groups: ScheduledRideGroup[];
+  setGroups: (ride: ScheduledRideGroup[]) => void;
+};
+
+type RideGroupsStore = {
+  groups: RideGroup[];
+  setGroups: (ride: RideGroup[]) => void;
+};
+
 export const useUserStore = create<UserStore>((set) => ({
   user: {
     id: "(/986)",
@@ -29,4 +40,16 @@ export const useUserStore = create<UserStore>((set) => ({
 export const useAuthStore = create<AuthStore>((set) => ({
   tokens: undefined,
   setTokens: (tokens) => set({ tokens }),
+}));
+
+export const useScheduledRideGroupsStore = create<ScheduledRideGroupsStore>(
+  (set) => ({
+    groups: [],
+    setGroups: (groups) => set({ groups: groups }),
+  }),
+);
+
+export const useRideGroupStore = create<RideGroupsStore>((set) => ({
+  groups: [],
+  setGroups: (groups) => set({ groups: groups }),
 }));

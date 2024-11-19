@@ -1,6 +1,6 @@
 import { User } from "./user";
 
-type RideGroup = {
+export type RideGroup = {
   groupId: string;
   groupName: string;
   mainRide: Ride;
@@ -13,7 +13,7 @@ export type ScheduledRideGroup = {
   secondarySchedule: Schedule;
 } & RideGroup;
 
-export type Ride = {
+type Ride = {
   rideId: string;
   destination: string;
   departurePoint: string;
