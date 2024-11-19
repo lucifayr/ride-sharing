@@ -18,7 +18,10 @@ type AuthStore = {
 
 export const useUserStore = create<UserStore>((set) => ({
   user: {
-    type: "logged-out",
+    id: "(/986)",
+    type: "logged-in",
+    name: "TestUser",
+    email: "test@test.com",
   },
   setUser: (user) => set({ user }),
 }));

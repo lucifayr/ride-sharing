@@ -80,7 +80,7 @@ function LoginPage() {
       return (
         <Shell>
           <button
-            className={`light:hover:shadow flex gap-2 rounded-lg border border-slate-200 px-4 py-2 transition duration-150 hover:border-slate-400 dark:border-slate-700 dark:hover:border-slate-500`}
+            className={`flex gap-2 rounded-lg border border-slate-200 px-4 py-2 transition duration-150 hover:border-slate-400 light:hover:shadow dark:border-slate-700 dark:hover:border-slate-500`}
             onClick={() => authenticateGoogle()}
           >
             <img
@@ -99,7 +99,7 @@ function LoginPage() {
 function Shell({ children }: { children: ReactNode }) {
   return (
     <div className="flex h-full flex-col items-center justify-center">
-      <div className="light:shadow-md light:shadow-gray-200 flex max-h-[360px] max-w-[480px] flex-col items-center gap-4 rounded p-8 dark:bg-neutral-800">
+      <div className="flex max-h-[360px] max-w-[480px] flex-col items-center gap-4 rounded p-8 light:shadow-md light:shadow-gray-200 dark:bg-neutral-800">
         <h1 className="text-4xl font-bold">Ride Sharing</h1>
         {children}
       </div>
