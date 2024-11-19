@@ -1,60 +1,58 @@
 package utils
 
 import (
-	"context"
+	"database/sql"
 	"os"
 	"path"
 	"ride_sharing_api/app/assert"
-	"ride_sharing_api/app/common"
-	"ride_sharing_api/app/sqlc"
-	"sync"
+	"slices"
+	"strconv"
+	"strings"
 	"syscall"
 )
 
-var once sync.Once
+var existingDBs = make([]string, 0)
 
-func SetupTestDBs() {
-	once.Do(func() {
-		regenerateTestDbs()
-	})
-}
+func InitTestDB(setupFilePath string) *sql.DB {
+	assert.False(slices.Contains(existingDBs, setupFilePath), "Test database was initialized more than once!", "path:", setupFilePath)
+	existingDBs = append(existingDBs, setupFilePath)
 
-func regenerateTestDbs() {
-	dbDir := path.Join(ProjectRoot(), "db/testing")
+	dbName := strings.TrimSuffix(path.Base(setupFilePath), path.Ext(setupFilePath))
+	dbDir := path.Join(ProjectRoot(), "db/testing/instances")
+	dbPath := path.Join(dbDir, dbName+".db")
+
+	prefix := strings.Split(dbName, "-")[0]
+	_, err := strconv.Atoi(prefix)
+	assert.Nil(err, "Invalid prefix for setup file. Expected valid number (e.g. 0123-). Received", prefix)
 
 	syscall.Umask(0)
-	err := os.RemoveAll(dbDir)
+	err = os.MkdirAll(dbDir, 0777)
+	f, err := os.Create(dbPath)
 	assert.Nil(err)
-	err = os.Mkdir(dbDir, 0777)
+	f.Close()
+
+	db, err := InitDb(dbPath)
 	assert.Nil(err)
 
-	for db, users := range common.TEST_USERS {
-		dbName := path.Join(dbDir, db+".db")
-		err = CreateDbFileIfNotExists(dbName)
-		assert.Nil(err)
+	ddlBytes, err := os.ReadFile(setupFilePath)
+	assert.Nil(err)
+	ddl := string(ddlBytes)
 
-		db, err := InitDb(dbName)
-		assert.Nil(err)
-		queries := sqlc.New(db)
-
-		for _, user := range users {
-			args_create := sqlc.UsersCreateParams{
-				ID:       user.ID,
-				Name:     user.Name,
-				Email:    user.Email,
-				Provider: user.Provider,
-			}
-			_, err = queries.UsersCreate(context.Background(), args_create)
-			assert.Nil(err)
-
-			args_set_tokens := sqlc.UsersSetTokensParams{
-				AccessToken:  user.AccessToken,
-				RefreshToken: user.RefreshToken,
-				ID:           user.ID,
-			}
-			err = queries.UsersSetTokens(context.Background(), args_set_tokens)
-			assert.Nil(err)
+	for _, line := range strings.Split(ddl, "\n") {
+		requirePath, found := strings.CutPrefix(line, "-- :require ")
+		if !found {
+			break
 		}
 
+		requiredDdl, err := os.ReadFile(path.Join(path.Dir(setupFilePath), requirePath))
+		assert.Nil(err)
+
+		_, err = db.Exec(string(requiredDdl))
+		assert.Nil(err)
 	}
+
+	_, err = db.Exec(ddl)
+	assert.Nil(err)
+
+	return db
 }
