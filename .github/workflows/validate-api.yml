@@ -1,9 +1,7 @@
 name: Validate API Codebase
 on:
   pull_request:
-    types:
-      - opened
-      - edited
+    types: [opened, synchronize]
     branches:
       - "*"
   push:
@@ -12,6 +10,14 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-22.04
+    env:
+      RS_DB_NAME: rides.db
+      RS_HOST_ADDR: 127.0.0.1:8000
+      RS_WEB_APP_URL: http://127.0.0.1:5173
+      RS_SECRET_AUTH_TOKEN: 03**CsL@pfFmtt5K4LE*SVYXPseFZ^FO
+      RS_GOOGLE_REDIRECT_URL: http://127.0.0.1:8000/auth/google/callback
+      RS_GOOGLE_CLIENT_ID: fake
+      RS_GOOGLE_CLIENT_SECRET: fake
     steps:
       - uses: actions/checkout@v3
       - name: Build

@@ -4,4 +4,6 @@ SELECT
     email,
     provider
 FROM
-    users;
+    users
+LIMIT
+    1;

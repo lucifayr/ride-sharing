@@ -14,7 +14,6 @@ import (
 
 const (
 	MigrationKindUp       = "up"
-	MigrationKindDown     = "down"
 	MigrationKindValidate = "validate"
 )
 
@@ -30,7 +29,6 @@ type Migration struct {
 func FileSuffixes() []string {
 	return []string{
 		fmt.Sprintf("%s.sql", MigrationKindUp),
-		fmt.Sprintf("%s.sql", MigrationKindDown),
 		fmt.Sprintf("%s.sql", MigrationKindValidate),
 	}
 }
@@ -53,13 +51,10 @@ func FromEmbedFs(fs embed.FS, root string) Migrations {
 		mUpSuffix := fmt.Sprintf(".%s.sql", MigrationKindUp)
 		isUp := strings.HasSuffix(name, mUpSuffix)
 
-		mDownSuffix := fmt.Sprintf(".%s.sql", MigrationKindDown)
-		isDown := strings.HasSuffix(name, mDownSuffix)
-
 		mValSuffix := fmt.Sprintf(".%s.sql", MigrationKindValidate)
 		isVal := strings.HasSuffix(name, mValSuffix)
 
-		assert.True(isUp || isDown || isVal, "Expected file to end with '.up.sql', '.down.sql', '.validate.sql'.", "name", name)
+		assert.True(isUp || isVal, "Expected file to end with '.up.sql' or '.validate.sql'.", "name", name)
 
 		path := path.Join(root, name)
 
@@ -73,11 +68,6 @@ func FromEmbedFs(fs embed.FS, root string) Migrations {
 		if isUp {
 			mName = strings.Replace(name, mUpSuffix, "", 1)
 			mKind = MigrationKindUp
-		}
-
-		if isDown {
-			mName = strings.Replace(name, mDownSuffix, "", 1)
-			mKind = MigrationKindDown
 		}
 
 		if isVal {
@@ -105,7 +95,6 @@ func FromEmbedFs(fs embed.FS, root string) Migrations {
 
 	for _, m := range migrations {
 		assert.True(contains(m.sql, MigrationKindUp), "Migration is missing .up variant", "name", m.name)
-		assert.True(contains(m.sql, MigrationKindDown), "Migration is missing .down variant", "name", m.name)
 		assert.True(contains(m.sql, MigrationKindValidate), "Migration is missing .validate variant", "name", m.name)
 	}
 
@@ -132,23 +121,7 @@ func (migrations *Migrations) Up(db *sql.DB) {
 
 		log.Printf("Running migration [%s] : %s\n", MigrationKindUp, mig.name)
 		err = runMigration(db, sql)
-		if err != nil {
-			log.Println("Migration failed.", "name", mig.name, "error", err)
-		}
-	}
-}
-
-func (migrations *Migrations) Down(db *sql.DB) {
-	for idx := range migrations.migrationSourceTexts {
-		mig := migrations.migrationSourceTexts[len(migrations.migrationSourceTexts)-(idx+1)]
-
-		sql := mig.sql[MigrationKindDown]
-
-		log.Printf("Running migration [%s] : %s\n", MigrationKindDown, mig.name)
-		err := runMigration(db, sql)
-		if err != nil {
-			log.Println("Migration failed.", "name", mig.name, "error", err)
-		}
+		assert.Nil(err, "Migration failed.", "name", mig.name)
 	}
 }
 

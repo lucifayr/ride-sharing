@@ -13,8 +13,9 @@ type Ride struct {
 	LocationFrom   string `json:"locationFrom"`
 	LocationTo     string `json:"locationTo"`
 	TackingPlaceAt string `json:"tackingPlaceAt"`
-	CreateBy       string `json:"createBy"`
+	CreatedBy      string `json:"createdBy"`
 	Driver         string `json:"driver"`
+	TransportLimit int64  `json:"transportLimit"`
 }
 
 type RideParticipant struct {

@@ -6,11 +6,15 @@ SELECT
     created_by,
     driver
 FROM
-    rides;
+    rides
+LIMIT
+    1;
 
 
 SELECT
     user_id,
     ride_id
 FROM
-    ride_participants;
+    ride_participants
+LIMIT
+    1;

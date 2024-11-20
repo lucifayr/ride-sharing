@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"ride_sharing_api/app/assert"
 	"ride_sharing_api/app/sqlc"
 	"ride_sharing_api/app/utils"
 	"time"
@@ -19,6 +20,7 @@ type createRideParams struct {
 	LocationTo     *string    `json:"locationTo" validate:"required"`
 	TackingPlaceAt *time.Time `json:"tackingPlaceAt" validate:"required"`
 	Driver         *string    `json:"driver" validate:"required"`
+	TransportLimit *int64     `json:"transportLimit" validate:"required"`
 }
 
 func createRide(w http.ResponseWriter, r *http.Request) {
@@ -42,11 +44,20 @@ func createRide(w http.ResponseWriter, r *http.Request) {
 	err = utils.Validate.Struct(params)
 	if err != nil {
 		log.Println("Error: Invalid JSON in request body.", "error:", err)
-		http.Error(w, "Invalid JSON in request body. "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "Missing/Invalid fields in request body. "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	args := sqlc.RidesCreateParams{LocationFrom: *params.LocationFrom, LocationTo: *params.LocationTo, TackingPlaceAt: params.TackingPlaceAt.Format(time.RFC3339), Driver: *params.Driver, CreateBy: user.ID}
+	tackingPlaceAt := params.TackingPlaceAt.UTC().Format(time.RFC3339)
+	args := sqlc.RidesCreateParams{
+		LocationFrom:   *params.LocationFrom,
+		LocationTo:     *params.LocationTo,
+		TackingPlaceAt: tackingPlaceAt,
+		Driver:         *params.Driver,
+		CreatedBy:      user.ID,
+		TransportLimit: *params.TransportLimit,
+	}
+
 	ride, err := state.queries.RidesCreate(r.Context(), args)
 	if err != nil {
 		log.Println("Error: Failed to create ride.", "error:", err, "args:", args)
@@ -54,5 +65,8 @@ func createRide(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("Created ride", ride)
+	resp, err := json.Marshal(ride)
+	assert.Nil(err, "Failed to serialize ride.")
+	w.WriteHeader(201)
+	w.Write(resp)
 }

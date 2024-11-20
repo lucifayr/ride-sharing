@@ -33,11 +33,6 @@ var commands = Command{
 						runMigrationsUp()
 					},
 				},
-				"down": {
-					exec: func(_cmd Command, _args []string) {
-						runMigrationsDown()
-					},
-				},
 				"create": {
 					exec: func(_cmd Command, args []string) {
 						flags := parseCreateMigrationFlags(args)
@@ -76,12 +71,6 @@ func runMigrationsUp() {
 	db := setupDb()
 	m := migrations.FromEmbedFs(embeddings.DbMigrations, "db/migrations")
 	m.Up(db)
-}
-
-func runMigrationsDown() {
-	db := setupDb()
-	m := migrations.FromEmbedFs(embeddings.DbMigrations, "db/migrations")
-	m.Down(db)
 }
 
 func fmtSqlFiles() {

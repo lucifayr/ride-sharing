@@ -2,4 +2,6 @@ SELECT
     access_token,
     refresh_token
 FROM
-    users;
+    users
+LIMIT
+    1;

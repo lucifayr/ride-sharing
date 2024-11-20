@@ -36,6 +36,7 @@ func NewRESTApi(queries *sqlc.Queries) http.Handler {
 	authHandlers(mux)
 	authHandlersGoogle(mux)
 	userHandlers(mux)
+	rideHandlers(mux)
 
 	return mux
 }
@@ -81,18 +82,18 @@ func bearerAuth(ignoreExpired bool) func(w http.ResponseWriter, r *http.Request)
 
 		tokens, err := decodeAccessToken([]byte(token))
 		if err != nil || (!ignoreExpired && time.Now().After(tokens.ExpiresAt)) {
-			http.Error(w, "Invalid access token in 'Authorization' header.", http.StatusBadRequest)
+			http.Error(w, "Invalid access token in 'Authorization' header.", http.StatusUnauthorized)
 			return true, nil
 		}
 
 		user, err := state.queries.UsersGetById(r.Context(), *tokens.Id)
 		if err != nil {
-			http.Error(w, "Failed to get user with matching token.", http.StatusNotFound)
+			http.Error(w, "Invalid access token in 'Authorization' header.", http.StatusUnauthorized)
 			return true, nil
 		}
 
 		if !user.AccessToken.Valid || user.AccessToken.String != token {
-			http.Error(w, "Token is invalid.", http.StatusUnauthorized)
+			http.Error(w, "Invalid access token in 'Authorization' header.", http.StatusUnauthorized)
 			return true, nil
 		}
 
