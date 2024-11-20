@@ -1,9 +1,7 @@
 name: Validate API Codebase
 on:
   pull_request:
-    types:
-      - opened
-      - edited
+    types: [opened, synchronize]
     branches:
       - "*"
   push:
