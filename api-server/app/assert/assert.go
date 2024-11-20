@@ -1,12 +1,25 @@
 package assert
 
 import (
+	"fmt"
 	"log"
 )
 
 func Nil(value any, msgs ...any) {
 	if value != nil {
 		log.Panicln(append([]any{"Assertion Failed - Value must be 'nil' but received:", value}, resolveMsgs(msgs)...)...)
+	}
+}
+
+func Eq(a any, b any, msgs ...any) {
+	if a != b {
+		log.Panicln(append([]any{fmt.Sprintf("Assertion Failed - 'a' must be equal to 'b'. Received\na: %s\n\nb: %s", a, b)}, resolveMsgs(msgs)...)...)
+	}
+}
+
+func Neq(a any, b any, msgs ...any) {
+	if a == b {
+		log.Panicln(append([]any{fmt.Sprintf("Assertion Failed - 'a' must not be equal to 'b'. Received\na & b: %s", a)}, resolveMsgs(msgs)...)...)
 	}
 }
 
