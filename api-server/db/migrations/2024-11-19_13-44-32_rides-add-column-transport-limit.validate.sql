@@ -1,4 +1,6 @@
 SELECT
     transport_limit
 FROM
-    rides;
+    rides
+LIMIT
+    1;
