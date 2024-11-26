@@ -14,11 +14,14 @@ type LoginPageState = "already-logged-in" | "received-auth-tokens" | "idle";
 
 function LoginPage() {
   const { user, setUser } = useUserStore();
-  const { tokens } = useAuthStore();
+  const { tokens, clearTokens } = useAuthStore();
   const navigate = useNavigate();
 
   const loginAsUser = useMutation({
     mutationKey: ["login-as-user"],
+    onError: () => {
+      clearTokens();
+    },
     mutationFn: async () => {
       if (tokens === undefined) {
         return;

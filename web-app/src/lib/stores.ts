@@ -1,6 +1,7 @@
 import { RideGroup, ScheduledRideGroup } from "./models/models";
 import { User } from "./models/user";
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 
 export type AuthTokens = {
   accessToken: string;
@@ -15,6 +16,7 @@ type UserStore = {
 type AuthStore = {
   tokens: AuthTokens | undefined;
   setTokens: (tokens: AuthTokens) => void;
+  clearTokens: () => void;
 };
 
 type ScheduledRideGroupsStore = {
@@ -27,20 +29,33 @@ type RideGroupsStore = {
   setGroups: (ride: RideGroup[]) => void;
 };
 
+const fakeLoggedInUser: User = {
+  id: "(/986)",
+  type: "logged-in",
+  name: "TestUser",
+  email: "test@test.com",
+};
+
 export const useUserStore = create<UserStore>((set) => ({
   user: {
-    id: "(/986)",
-    type: "logged-in",
-    name: "TestUser",
-    email: "test@test.com",
+    type: "logged-out",
   },
   setUser: (user) => set({ user }),
 }));
 
-export const useAuthStore = create<AuthStore>((set) => ({
-  tokens: undefined,
-  setTokens: (tokens) => set({ tokens }),
-}));
+export const useAuthStore = create<AuthStore>()(
+  persist(
+    (set) => ({
+      tokens: undefined,
+      setTokens: (tokens) => set({ tokens }),
+      clearTokens: () => set({ tokens: undefined }),
+    }),
+    {
+      name: "auth-store",
+      storage: createJSONStorage(() => localStorage),
+    },
+  ),
+);
 
 export const useScheduledRideGroupsStore = create<ScheduledRideGroupsStore>(
   (set) => ({

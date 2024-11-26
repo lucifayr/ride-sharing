@@ -29,7 +29,7 @@ func createRide(w http.ResponseWriter, r *http.Request) {
 	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Println("Error: Invalid request body.", "error:", err)
-		http.Error(w, "Invalid request body.", http.StatusBadRequest)
+		httpWriteErr(w, http.StatusBadRequest, "Invalid request body.")
 		return
 	}
 
@@ -37,14 +37,14 @@ func createRide(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(data, &params)
 	if err != nil {
 		log.Println("Error: Invalid JSON in request body.", "error:", err)
-		http.Error(w, "Invalid JSON in request body.", http.StatusBadRequest)
+		httpWriteErr(w, http.StatusBadRequest, "Invalid JSON in request body.", err.Error())
 		return
 	}
 
 	err = utils.Validate.Struct(params)
 	if err != nil {
 		log.Println("Error: Invalid JSON in request body.", "error:", err)
-		http.Error(w, "Missing/Invalid fields in request body. "+err.Error(), http.StatusBadRequest)
+		httpWriteErr(w, http.StatusBadRequest, "Missing/Invalid fields in request body.", err.Error())
 		return
 	}
 
@@ -61,7 +61,7 @@ func createRide(w http.ResponseWriter, r *http.Request) {
 	ride, err := state.queries.RidesCreate(r.Context(), args)
 	if err != nil {
 		log.Println("Error: Failed to create ride.", "error:", err, "args:", args)
-		http.Error(w, "Failed to create ride. This might be due to invalid data or because of an internal server error.", http.StatusInternalServerError)
+		httpWriteErr(w, http.StatusInternalServerError, "Failed to create ride. This might be due to invalid data or because of an internal server error.")
 		return
 	}
 

@@ -2,6 +2,7 @@ import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import { useUserStore } from "../lib/stores";
 import { LoadingSpinner } from "../lib/components/Spinner";
 import { GroupBar } from "../lib/components/GroupBar";
+import { CreateRideForm } from "../lib/components/CreateRideForm";
 
 export const Route = createLazyFileRoute("/dashboard")({
   component: DashBoard,
@@ -17,7 +18,7 @@ function DashBoard() {
 
   return (
     <>
-      <GroupBar />
+      <CreateRideForm />
     </>
   );
 }
