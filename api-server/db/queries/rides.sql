@@ -13,3 +13,16 @@ INSERT INTO
     )
 VALUES
     (?, ?, ?, ?, ?, ?) RETURNING *;
+
+
+-- name: RidesGetMany :many
+SELECT
+    *
+FROM
+    rides
+ORDER BY
+    created_at DESC
+LIMIT
+    50
+OFFSET
+    ?;

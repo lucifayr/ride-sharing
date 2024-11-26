@@ -8,11 +8,13 @@ import (
 	"ride_sharing_api/app/assert"
 	"ride_sharing_api/app/sqlc"
 	"ride_sharing_api/app/utils"
+	"strconv"
 	"time"
 )
 
 func rideHandlers(h *http.ServeMux) {
 	h.HandleFunc("POST /rides", handle(createRide).with(bearerAuth(false)).build())
+	h.HandleFunc("GET /rides/all", handle(getAllRides).with(bearerAuth(false)).build())
 }
 
 type createRideParams struct {
@@ -68,5 +70,25 @@ func createRide(w http.ResponseWriter, r *http.Request) {
 	resp, err := json.Marshal(ride)
 	assert.Nil(err, "Failed to serialize ride.")
 	w.WriteHeader(201)
+	w.Write(resp)
+}
+
+func getAllRides(w http.ResponseWriter, r *http.Request) {
+	var offset int64 = 0
+	offsetStr := r.FormValue("offset")
+	if parsed, err := strconv.ParseInt(offsetStr, 10, 64); err == nil && parsed > 0 {
+		offset = parsed
+	}
+
+	rides, err := state.queries.RidesGetMany(r.Context(), offset)
+	if err != nil {
+		log.Println("Error: Failed to get rides.", "error:", err)
+		httpWriteErr(w, http.StatusInternalServerError, "Failed to get rides.")
+		return
+	}
+
+	resp, err := json.Marshal(rides)
+	assert.Nil(err, "Failed to serialize rides.")
+	w.WriteHeader(200)
 	w.Write(resp)
 }

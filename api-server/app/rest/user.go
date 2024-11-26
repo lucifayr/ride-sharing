@@ -8,10 +8,10 @@ import (
 )
 
 func userHandlers(h *http.ServeMux) {
-	h.HandleFunc("GET /users", handle(getUserById).with(bearerAuth(false)).build())
+	h.HandleFunc("GET /users/me", handle(getUserMe).with(bearerAuth(false)).build())
 }
 
-func getUserById(w http.ResponseWriter, r *http.Request) {
+func getUserMe(w http.ResponseWriter, r *http.Request) {
 	user := getMiddlewareData[sqlc.User](r, "user")
 	bytes, err := json.Marshal(user)
 	assert.True(err == nil, "Failed to serialize user struct.", "user:", user, "error:", err)

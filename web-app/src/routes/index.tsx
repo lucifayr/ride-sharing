@@ -27,7 +27,7 @@ function LoginPage() {
         return;
       }
 
-      const res = await fetch(`${import.meta.env.VITE_API_URI}/users`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URI}/users/me`, {
         method: "GET",
         headers: {
           Authorization: tokens.accessToken,

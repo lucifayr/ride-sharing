@@ -9,13 +9,14 @@ import (
 )
 
 type Ride struct {
-	ID             int64  `json:"id"`
-	LocationFrom   string `json:"locationFrom"`
-	LocationTo     string `json:"locationTo"`
-	TackingPlaceAt string `json:"tackingPlaceAt"`
-	CreatedBy      string `json:"createdBy"`
-	Driver         string `json:"driver"`
-	TransportLimit int64  `json:"transportLimit"`
+	ID             int64       `json:"id"`
+	LocationFrom   string      `json:"locationFrom"`
+	LocationTo     string      `json:"locationTo"`
+	TackingPlaceAt string      `json:"tackingPlaceAt"`
+	CreatedBy      string      `json:"createdBy"`
+	Driver         string      `json:"driver"`
+	TransportLimit int64       `json:"transportLimit"`
+	CreatedAt      interface{} `json:"createdAt"`
 }
 
 type RideParticipant struct {

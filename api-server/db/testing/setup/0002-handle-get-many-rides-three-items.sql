@@ -1,0 +1,39 @@
+-- :require ./no-init-add-three-users.sql
+INSERT INTO
+    rides (
+        location_from,
+        location_to,
+        tacking_place_at,
+        created_at,
+        created_by,
+        driver,
+        transport_limit
+    )
+VALUES
+    (
+        'Graz',
+        "Wien",
+        '2024-11-26T15:18:26Z',
+        '2024-11-26T15:18:26Z',
+        'NnCaPHQLC9',
+        'm6SYNABgAw',
+        4
+    ),
+    (
+        "Tokyo",
+        'Wien',
+        '2024-12-24T15:18:30Z',
+        '2024-12-24T15:18:30Z',
+        'nmBSHcxyvn',
+        'm6SYNABgAw',
+        2
+    ),
+    (
+        'NYC',
+        "Tokyo",
+        '2024-11-28T15:18:30Z',
+        '2024-11-28T15:18:30Z',
+        'm6SYNABgAw',
+        'NnCaPHQLC9',
+        2
+    );

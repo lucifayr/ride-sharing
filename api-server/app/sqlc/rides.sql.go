@@ -20,7 +20,7 @@ INSERT INTO
         transport_limit
     )
 VALUES
-    (?, ?, ?, ?, ?, ?) RETURNING id, location_from, location_to, tacking_place_at, created_by, driver, transport_limit
+    (?, ?, ?, ?, ?, ?) RETURNING id, location_from, location_to, tacking_place_at, created_by, driver, transport_limit, created_at
 `
 
 type RidesCreateParams struct {
@@ -52,6 +52,52 @@ func (q *Queries) RidesCreate(ctx context.Context, arg RidesCreateParams) (Ride,
 		&i.CreatedBy,
 		&i.Driver,
 		&i.TransportLimit,
+		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const ridesGetMany = `-- name: RidesGetMany :many
+SELECT
+    id, location_from, location_to, tacking_place_at, created_by, driver, transport_limit, created_at
+FROM
+    rides
+ORDER BY
+    created_at DESC
+LIMIT
+    50
+OFFSET
+    ?
+`
+
+func (q *Queries) RidesGetMany(ctx context.Context, offset int64) ([]Ride, error) {
+	rows, err := q.db.QueryContext(ctx, ridesGetMany, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Ride
+	for rows.Next() {
+		var i Ride
+		if err := rows.Scan(
+			&i.ID,
+			&i.LocationFrom,
+			&i.LocationTo,
+			&i.TackingPlaceAt,
+			&i.CreatedBy,
+			&i.Driver,
+			&i.TransportLimit,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
