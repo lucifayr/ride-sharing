@@ -9,14 +9,14 @@ import (
 )
 
 type Ride struct {
-	ID             string         `json:"id"`
-	LocationFrom   string         `json:"locationFrom"`
-	LocationTo     string         `json:"locationTo"`
-	TackingPlaceAt string         `json:"tackingPlaceAt"`
-	CreatedBy      string         `json:"createdBy"`
-	Driver         string         `json:"driver"`
-	TransportLimit int64          `json:"transportLimit"`
-	CreatedAt      sql.NullString `json:"createdAt"`
+	ID             string `json:"id"`
+	LocationFrom   string `json:"locationFrom"`
+	LocationTo     string `json:"locationTo"`
+	TackingPlaceAt string `json:"tackingPlaceAt"`
+	CreatedBy      string `json:"createdBy"`
+	Driver         string `json:"driver"`
+	TransportLimit int64  `json:"transportLimit"`
+	CreatedAt      string `json:"createdAt"`
 }
 
 type RideParticipant struct {

@@ -110,7 +110,6 @@ func getRideById(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ride, err := state.queries.RidesGetById(r.Context(), id)
-	log.Println(err)
 	if errors.Is(err, sql.ErrNoRows) {
 		httpWriteErr(w, http.StatusNotFound, "No ride with the provide 'id' exists.")
 		return

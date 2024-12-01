@@ -4,6 +4,7 @@ export type Ride = {
   locationTo: string;
   tackingPlaceAt: string;
   createdBy: string;
+  createdByEmail: string;
   driver: string;
   driverEmail: string;
   transportLimit: number;

@@ -7,7 +7,6 @@ package sqlc
 
 import (
 	"context"
-	"database/sql"
 )
 
 const ridesCreate = `-- name: RidesCreate :one
@@ -68,24 +67,27 @@ SELECT
     created_at,
     transport_limit,
     driver,
-    users.email AS driver_email
+    ud.email AS driver_email,
+    uc.email AS created_by_email
 FROM
     rides
-    INNER JOIN users ON rides.driver = users.id
+    INNER JOIN users ud ON rides.driver = ud.id
+    INNER JOIN users uc ON rides.created_by = uc.id
 WHERE
     rides.id = ?
 `
 
 type RidesGetByIdRow struct {
-	ID             string         `json:"id"`
-	LocationFrom   string         `json:"locationFrom"`
-	LocationTo     string         `json:"locationTo"`
-	TackingPlaceAt string         `json:"tackingPlaceAt"`
-	CreatedBy      string         `json:"createdBy"`
-	CreatedAt      sql.NullString `json:"createdAt"`
-	TransportLimit int64          `json:"transportLimit"`
-	Driver         string         `json:"driver"`
-	DriverEmail    string         `json:"driverEmail"`
+	ID             string `json:"id"`
+	LocationFrom   string `json:"locationFrom"`
+	LocationTo     string `json:"locationTo"`
+	TackingPlaceAt string `json:"tackingPlaceAt"`
+	CreatedBy      string `json:"createdBy"`
+	CreatedAt      string `json:"createdAt"`
+	TransportLimit int64  `json:"transportLimit"`
+	Driver         string `json:"driver"`
+	DriverEmail    string `json:"driverEmail"`
+	CreatedByEmail string `json:"createdByEmail"`
 }
 
 func (q *Queries) RidesGetById(ctx context.Context, id string) (RidesGetByIdRow, error) {
@@ -101,6 +103,7 @@ func (q *Queries) RidesGetById(ctx context.Context, id string) (RidesGetByIdRow,
 		&i.TransportLimit,
 		&i.Driver,
 		&i.DriverEmail,
+		&i.CreatedByEmail,
 	)
 	return i, err
 }
@@ -115,10 +118,12 @@ SELECT
     created_at,
     transport_limit,
     driver,
-    users.email AS driver_email
+    ud.email AS driver_email,
+    uc.email AS created_by_email
 FROM
     rides
-    INNER JOIN users ON rides.driver = users.id
+    INNER JOIN users ud ON rides.driver = ud.id
+    INNER JOIN users uc ON rides.created_by = uc.id
 ORDER BY
     created_at DESC
 LIMIT
@@ -128,15 +133,16 @@ OFFSET
 `
 
 type RidesGetManyRow struct {
-	ID             string         `json:"id"`
-	LocationFrom   string         `json:"locationFrom"`
-	LocationTo     string         `json:"locationTo"`
-	TackingPlaceAt string         `json:"tackingPlaceAt"`
-	CreatedBy      string         `json:"createdBy"`
-	CreatedAt      sql.NullString `json:"createdAt"`
-	TransportLimit int64          `json:"transportLimit"`
-	Driver         string         `json:"driver"`
-	DriverEmail    string         `json:"driverEmail"`
+	ID             string `json:"id"`
+	LocationFrom   string `json:"locationFrom"`
+	LocationTo     string `json:"locationTo"`
+	TackingPlaceAt string `json:"tackingPlaceAt"`
+	CreatedBy      string `json:"createdBy"`
+	CreatedAt      string `json:"createdAt"`
+	TransportLimit int64  `json:"transportLimit"`
+	Driver         string `json:"driver"`
+	DriverEmail    string `json:"driverEmail"`
+	CreatedByEmail string `json:"createdByEmail"`
 }
 
 func (q *Queries) RidesGetMany(ctx context.Context, offset int64) ([]RidesGetManyRow, error) {
@@ -158,6 +164,7 @@ func (q *Queries) RidesGetMany(ctx context.Context, offset int64) ([]RidesGetMan
 			&i.TransportLimit,
 			&i.Driver,
 			&i.DriverEmail,
+			&i.CreatedByEmail,
 		); err != nil {
 			return nil, err
 		}

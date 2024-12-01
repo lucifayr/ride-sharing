@@ -29,6 +29,8 @@ function DashBoard() {
 }
 
 function RideList({ tokens }: { tokens: AuthTokens }) {
+  const navigate = useNavigate();
+
   const columns: {
     key: keyof Ride;
     label: string;
@@ -91,6 +93,7 @@ function RideList({ tokens }: { tokens: AuthTokens }) {
         {rides.map((ride, idx) => {
           return (
             <RideListRow
+              key={idx}
               isLast={idx === rides.length - 1}
               values={columns.map(({ key, map }) => {
                 if (map) {
@@ -98,6 +101,12 @@ function RideList({ tokens }: { tokens: AuthTokens }) {
                 }
                 return ride[key];
               })}
+              onClick={() => {
+                navigate({
+                  to: "/rides/$rideId",
+                  params: { rideId: ride.id.toString() },
+                });
+              }}
             />
           );
         })}
@@ -106,25 +115,43 @@ function RideList({ tokens }: { tokens: AuthTokens }) {
   );
 }
 
+// horrible API, very sorry
 function RideListRow({
   values,
   isHeading,
   isLast,
+  onClick,
 }: {
   values: (string | ReactNode)[];
   isHeading?: boolean;
   isLast?: boolean;
+  onClick?: () => void;
 }) {
   return (
     <tr
-      className={`border-neutral-300 dark:border-neutral-600 ${!isLast && !isHeading ? "border-b" : ""} ${isHeading ? "bg-neutral-200 dark:bg-neutral-700" : "bg-neutral-100 dark:bg-neutral-800"}`}
+      className={`border-neutral-300 dark:border-neutral-600 ${!isHeading ? "cursor-pointer" : ""} ${!isLast && !isHeading ? "border-b" : ""} ${isHeading ? "bg-neutral-200 dark:bg-neutral-700" : "bg-neutral-100 dark:bg-neutral-800"}`}
+      onClick={onClick}
     >
-      {values.map((value) => {
+      {values.map((value, idx) => {
         if (isHeading) {
-          return <th className="px-4 py-2">{value}</th>;
+          return (
+            <th
+              key={idx}
+              className="px-4 py-2"
+            >
+              {value}
+            </th>
+          );
         }
 
-        return <td className="px-4 py-2">{value}</td>;
+        return (
+          <td
+            key={idx}
+            className="px-4 py-2"
+          >
+            {value}
+          </td>
+        );
       })}
     </tr>
   );

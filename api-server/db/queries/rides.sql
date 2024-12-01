@@ -25,10 +25,12 @@ SELECT
     created_at,
     transport_limit,
     driver,
-    users.email AS driver_email
+    ud.email AS driver_email,
+    uc.email AS created_by_email
 FROM
     rides
-    INNER JOIN users ON rides.driver = users.id
+    INNER JOIN users ud ON rides.driver = ud.id
+    INNER JOIN users uc ON rides.created_by = uc.id
 ORDER BY
     created_at DESC
 LIMIT
@@ -47,9 +49,11 @@ SELECT
     created_at,
     transport_limit,
     driver,
-    users.email AS driver_email
+    ud.email AS driver_email,
+    uc.email AS created_by_email
 FROM
     rides
-    INNER JOIN users ON rides.driver = users.id
+    INNER JOIN users ud ON rides.driver = ud.id
+    INNER JOIN users uc ON rides.created_by = uc.id
 WHERE
     rides.id = ?;

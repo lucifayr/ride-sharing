@@ -15,6 +15,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { Route as rootRoute } from './routes/__root'
 import { Route as AuthenticateImport } from './routes/authenticate'
 import { Route as IndexImport } from './routes/index'
+import { Route as RidesRideIdImport } from './routes/rides.$rideId'
 
 // Create Virtual Routes
 
@@ -37,6 +38,12 @@ const AuthenticateRoute = AuthenticateImport.update({
 const IndexRoute = IndexImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const RidesRideIdRoute = RidesRideIdImport.update({
+  id: '/rides/$rideId',
+  path: '/rides/$rideId',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -65,6 +72,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardLazyImport
       parentRoute: typeof rootRoute
     }
+    '/rides/$rideId': {
+      id: '/rides/$rideId'
+      path: '/rides/$rideId'
+      fullPath: '/rides/$rideId'
+      preLoaderRoute: typeof RidesRideIdImport
+      parentRoute: typeof rootRoute
+    }
   }
 }
 
@@ -74,12 +88,14 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/authenticate': typeof AuthenticateRoute
   '/dashboard': typeof DashboardLazyRoute
+  '/rides/$rideId': typeof RidesRideIdRoute
 }
 
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/authenticate': typeof AuthenticateRoute
   '/dashboard': typeof DashboardLazyRoute
+  '/rides/$rideId': typeof RidesRideIdRoute
 }
 
 export interface FileRoutesById {
@@ -87,14 +103,15 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/authenticate': typeof AuthenticateRoute
   '/dashboard': typeof DashboardLazyRoute
+  '/rides/$rideId': typeof RidesRideIdRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/authenticate' | '/dashboard'
+  fullPaths: '/' | '/authenticate' | '/dashboard' | '/rides/$rideId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/authenticate' | '/dashboard'
-  id: '__root__' | '/' | '/authenticate' | '/dashboard'
+  to: '/' | '/authenticate' | '/dashboard' | '/rides/$rideId'
+  id: '__root__' | '/' | '/authenticate' | '/dashboard' | '/rides/$rideId'
   fileRoutesById: FileRoutesById
 }
 
@@ -102,12 +119,14 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticateRoute: typeof AuthenticateRoute
   DashboardLazyRoute: typeof DashboardLazyRoute
+  RidesRideIdRoute: typeof RidesRideIdRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticateRoute: AuthenticateRoute,
   DashboardLazyRoute: DashboardLazyRoute,
+  RidesRideIdRoute: RidesRideIdRoute,
 }
 
 export const routeTree = rootRoute
@@ -122,7 +141,8 @@ export const routeTree = rootRoute
       "children": [
         "/",
         "/authenticate",
-        "/dashboard"
+        "/dashboard",
+        "/rides/$rideId"
       ]
     },
     "/": {
@@ -133,6 +153,9 @@ export const routeTree = rootRoute
     },
     "/dashboard": {
       "filePath": "dashboard.lazy.tsx"
+    },
+    "/rides/$rideId": {
+      "filePath": "rides.$rideId.tsx"
     }
   }
 }
