@@ -1,16 +1,16 @@
 import { useForm } from "@tanstack/react-form";
 import { LoadingSpinner } from "./Spinner";
-import { useMutation } from "@tanstack/react-query";
-import { useAuthStore, useUserStore } from "../stores";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useUserStore } from "../stores";
 import { useNavigate } from "@tanstack/react-router";
+import { QUERY_KEYS } from "../query";
 
 export function CreateRideForm() {
   const navigate = useNavigate();
-  const { tokens } = useAuthStore();
+  const queryClient = useQueryClient();
   const { user } = useUserStore();
 
-  // fix this ASAP
-  if (tokens === undefined || user.type !== "logged-in") {
+  if (user.type !== "logged-in") {
     navigate({ to: "/" });
     return <LoadingSpinner content={<span>Redirecting to login...</span>} />;
   }
@@ -25,7 +25,8 @@ export function CreateRideForm() {
   const createRide = useMutation({
     mutationKey: ["create-ride-from-submmit"],
     mutationFn: async (params: typeof defaultValues) => {
-      const res = await fetch(`${import.meta.env.VITE_API_URI}/rides`, {
+      // TODO: check status
+      await fetch(`${import.meta.env.VITE_API_URI}/rides`, {
         method: "POST",
         body: JSON.stringify({
           ...params,
@@ -34,12 +35,12 @@ export function CreateRideForm() {
           driver: user.id,
         }),
         headers: {
-          Authorization: tokens.accessToken,
+          Authorization: user.tokens.accessToken,
           Accept: "application/json",
         },
       });
 
-      console.log(await res.json());
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.rideItems] });
     },
   });
 

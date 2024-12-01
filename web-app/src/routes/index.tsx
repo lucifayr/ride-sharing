@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useAuthStore, useUserStore } from "../lib/stores";
+import { useUserStore } from "../lib/stores";
 import { useMutation } from "@tanstack/react-query";
 import { validateAuthTokens } from "./authenticate";
 import googleIcon from "../assets/google-icon.svg";
@@ -14,23 +14,22 @@ type LoginPageState = "already-logged-in" | "received-auth-tokens" | "idle";
 
 function LoginPage() {
   const { user, setUser } = useUserStore();
-  const { tokens, clearTokens } = useAuthStore();
   const navigate = useNavigate();
 
   const loginAsUser = useMutation({
     mutationKey: ["login-as-user"],
     onError: () => {
-      clearTokens();
+      setUser({ type: "logged-out" });
     },
     mutationFn: async () => {
-      if (tokens === undefined) {
+      if (user.type === "logged-out") {
         return;
       }
 
       const res = await fetch(`${import.meta.env.VITE_API_URI}/users/me`, {
         method: "GET",
         headers: {
-          Authorization: tokens.accessToken,
+          Authorization: user.tokens.accessToken,
           Accept: "application/json",
         },
       });
@@ -41,13 +40,13 @@ function LoginPage() {
         );
       }
 
-      const user = await res.json();
-      // TODO: validate
+      const loggedInUser = await res.json();
       setUser({
         type: "logged-in",
-        id: user.id,
-        email: user.email,
-        name: user.name,
+        id: loggedInUser.id,
+        email: loggedInUser.email,
+        name: loggedInUser.name,
+        tokens: user.tokens,
       });
     },
   });
@@ -55,7 +54,7 @@ function LoginPage() {
   const state: LoginPageState =
     user.type === "logged-in"
       ? "already-logged-in"
-      : tokens !== undefined
+      : user.type === "before-logged-in"
         ? "received-auth-tokens"
         : "idle";
 
@@ -144,7 +143,10 @@ function receiveAuthMessage(event: MessageEvent) {
 
   try {
     const tokens = validateAuthTokens(event.data);
-    useAuthStore.getState().setTokens(tokens);
+    useUserStore.getState().setUser({
+      type: "before-logged-in",
+      tokens,
+    });
   } catch (err) {
     console.error("Invalid authentication token data.", err);
   }

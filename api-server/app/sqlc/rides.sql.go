@@ -7,6 +7,7 @@ package sqlc
 
 import (
 	"context"
+	"database/sql"
 )
 
 const ridesCreate = `-- name: RidesCreate :one
@@ -59,9 +60,18 @@ func (q *Queries) RidesCreate(ctx context.Context, arg RidesCreateParams) (Ride,
 
 const ridesGetMany = `-- name: RidesGetMany :many
 SELECT
-    id, location_from, location_to, tacking_place_at, created_by, driver, transport_limit, created_at
+    rides.id,
+    location_from,
+    location_to,
+    tacking_place_at,
+    created_by,
+    created_at,
+    transport_limit,
+    driver,
+    users.email AS driver_email
 FROM
     rides
+    INNER JOIN users ON rides.driver = users.id
 ORDER BY
     created_at DESC
 LIMIT
@@ -70,24 +80,37 @@ OFFSET
     ?
 `
 
-func (q *Queries) RidesGetMany(ctx context.Context, offset int64) ([]Ride, error) {
+type RidesGetManyRow struct {
+	ID             int64          `json:"id"`
+	LocationFrom   string         `json:"locationFrom"`
+	LocationTo     string         `json:"locationTo"`
+	TackingPlaceAt string         `json:"tackingPlaceAt"`
+	CreatedBy      string         `json:"createdBy"`
+	CreatedAt      sql.NullString `json:"createdAt"`
+	TransportLimit int64          `json:"transportLimit"`
+	Driver         string         `json:"driver"`
+	DriverEmail    string         `json:"driverEmail"`
+}
+
+func (q *Queries) RidesGetMany(ctx context.Context, offset int64) ([]RidesGetManyRow, error) {
 	rows, err := q.db.QueryContext(ctx, ridesGetMany, offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Ride
+	var items []RidesGetManyRow
 	for rows.Next() {
-		var i Ride
+		var i RidesGetManyRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.LocationFrom,
 			&i.LocationTo,
 			&i.TackingPlaceAt,
 			&i.CreatedBy,
-			&i.Driver,
-			&i.TransportLimit,
 			&i.CreatedAt,
+			&i.TransportLimit,
+			&i.Driver,
+			&i.DriverEmail,
 		); err != nil {
 			return nil, err
 		}

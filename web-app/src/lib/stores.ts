@@ -3,20 +3,9 @@ import { User } from "./models/user";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 
-export type AuthTokens = {
-  accessToken: string;
-  refreshToken: string;
-};
-
 type UserStore = {
   user: User;
   setUser: (user: User) => void;
-};
-
-type AuthStore = {
-  tokens: AuthTokens | undefined;
-  setTokens: (tokens: AuthTokens) => void;
-  clearTokens: () => void;
 };
 
 type ScheduledRideGroupsStore = {
@@ -29,29 +18,16 @@ type RideGroupsStore = {
   setGroups: (ride: RideGroup[]) => void;
 };
 
-const fakeLoggedInUser: User = {
-  id: "(/986)",
-  type: "logged-in",
-  name: "TestUser",
-  email: "test@test.com",
-};
-
-export const useUserStore = create<UserStore>((set) => ({
-  user: {
-    type: "logged-out",
-  },
-  setUser: (user) => set({ user }),
-}));
-
-export const useAuthStore = create<AuthStore>()(
+export const useUserStore = create<UserStore>()(
   persist(
     (set) => ({
-      tokens: undefined,
-      setTokens: (tokens) => set({ tokens }),
-      clearTokens: () => set({ tokens: undefined }),
+      user: {
+        type: "logged-out",
+      },
+      setUser: (user) => set({ user }),
     }),
     {
-      name: "auth-store",
+      name: "user",
       storage: createJSONStorage(() => localStorage),
     },
   ),

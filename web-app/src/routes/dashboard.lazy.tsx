@@ -1,8 +1,12 @@
 import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import { useUserStore } from "../lib/stores";
 import { LoadingSpinner } from "../lib/components/Spinner";
-import { GroupBar } from "../lib/components/GroupBar";
 import { CreateRideForm } from "../lib/components/CreateRideForm";
+import { useQuery } from "@tanstack/react-query";
+import { Ride } from "../lib/models/ride";
+import { AuthTokens } from "../lib/models/user";
+import { ReactNode } from "react";
+import { QUERY_KEYS } from "../lib/query";
 
 export const Route = createLazyFileRoute("/dashboard")({
   component: DashBoard,
@@ -17,8 +21,111 @@ function DashBoard() {
   }
 
   return (
-    <>
+    <div className="flex gap-8">
       <CreateRideForm />
-    </>
+      <RideList tokens={user.tokens} />
+    </div>
+  );
+}
+
+function RideList({ tokens }: { tokens: AuthTokens }) {
+  const columns: {
+    key: keyof Ride;
+    label: string;
+    map?: (field: any) => string;
+  }[] = [
+    { key: "driverEmail", label: "Driver" },
+    { key: "locationTo", label: "To" },
+    { key: "locationFrom", label: "From" },
+    {
+      key: "tackingPlaceAt",
+      label: "When",
+      map: (at) => new Date(at).toLocaleString(),
+    },
+  ];
+
+  const {
+    isPending,
+    error,
+    data: rides,
+  } = useQuery({
+    queryKey: [QUERY_KEYS.rideItems],
+    queryFn: async () => {
+      const res = await fetch(`${import.meta.env.VITE_API_URI}/rides/many`, {
+        method: "GET",
+        headers: {
+          Authorization: tokens.accessToken,
+          Accept: "application/json",
+        },
+      });
+
+      const rides = await res.json();
+      return rides as Ride[];
+    },
+  });
+
+  if (isPending) {
+    return <LoadingSpinner content={<span>Getting rides...</span>} />;
+  }
+
+  if (error) {
+    console.error(error);
+    return <span className="text-red-500">Failed to load rides</span>;
+  }
+
+  if (rides.length === 0) {
+    return <span>No rides found</span>;
+  }
+
+  return (
+    <table className="relative h-fit table-auto overflow-x-auto text-lg">
+      <thead className="uppercase">
+        <RideListRow
+          isHeading={true}
+          values={columns.map(({ label }) => {
+            return label;
+          })}
+        />
+      </thead>
+      <tbody>
+        {rides.map((ride, idx) => {
+          return (
+            <RideListRow
+              isLast={idx === rides.length - 1}
+              values={columns.map(({ key, map }) => {
+                if (map) {
+                  return map(ride[key]);
+                }
+                return ride[key];
+              })}
+            />
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
+
+function RideListRow({
+  values,
+  isHeading,
+  isLast,
+}: {
+  values: (string | ReactNode)[];
+  isHeading?: boolean;
+  isLast?: boolean;
+}) {
+  return (
+    <tr
+      className={`border-neutral-300 dark:border-neutral-600 ${!isLast && !isHeading ? "border-b" : ""} ${isHeading ? "bg-neutral-200 dark:bg-neutral-700" : "bg-neutral-100 dark:bg-neutral-800"}`}
+    >
+      {values.map((value) => {
+        if (isHeading) {
+          return <th className="px-4 py-2">{value}</th>;
+        }
+
+        return <td className="px-4 py-2">{value}</td>;
+      })}
+    </tr>
   );
 }

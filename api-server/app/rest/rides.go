@@ -14,7 +14,7 @@ import (
 
 func rideHandlers(h *http.ServeMux) {
 	h.HandleFunc("POST /rides", handle(createRide).with(bearerAuth(false)).build())
-	h.HandleFunc("GET /rides/all", handle(getAllRides).with(bearerAuth(false)).build())
+	h.HandleFunc("GET /rides/many", handle(getManyRides).with(bearerAuth(false)).build())
 }
 
 type createRideParams struct {
@@ -73,7 +73,7 @@ func createRide(w http.ResponseWriter, r *http.Request) {
 	w.Write(resp)
 }
 
-func getAllRides(w http.ResponseWriter, r *http.Request) {
+func getManyRides(w http.ResponseWriter, r *http.Request) {
 	var offset int64 = 0
 	offsetStr := r.FormValue("offset")
 	if parsed, err := strconv.ParseInt(offsetStr, 10, 64); err == nil && parsed > 0 {
@@ -87,7 +87,13 @@ func getAllRides(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := json.Marshal(rides)
+	var resp []byte
+	if len(rides) == 0 {
+		resp = []byte("[]")
+	} else {
+		resp, err = json.Marshal(rides)
+	}
+
 	assert.Nil(err, "Failed to serialize rides.")
 	w.WriteHeader(200)
 	w.Write(resp)
