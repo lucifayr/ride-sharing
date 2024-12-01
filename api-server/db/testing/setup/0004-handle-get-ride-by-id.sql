@@ -20,24 +20,4 @@ VALUES
         'NnCaPHQLC9',
         'm6SYNABgAw',
         4
-    ),
-    (
-        '222',
-        "Tokyo",
-        'Wien',
-        '2024-12-24T15:18:30Z',
-        '2024-12-24T15:18:30Z',
-        'nmBSHcxyvn',
-        'm6SYNABgAw',
-        2
-    ),
-    (
-        '321',
-        'NYC',
-        "Tokyo",
-        '2024-11-28T15:18:30Z',
-        '2024-11-28T15:18:30Z',
-        'm6SYNABgAw',
-        'NnCaPHQLC9',
-        2
     );

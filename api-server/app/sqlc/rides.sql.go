@@ -58,6 +58,53 @@ func (q *Queries) RidesCreate(ctx context.Context, arg RidesCreateParams) (Ride,
 	return i, err
 }
 
+const ridesGetById = `-- name: RidesGetById :one
+SELECT
+    rides.id,
+    location_from,
+    location_to,
+    tacking_place_at,
+    created_by,
+    created_at,
+    transport_limit,
+    driver,
+    users.email AS driver_email
+FROM
+    rides
+    INNER JOIN users ON rides.driver = users.id
+WHERE
+    rides.id = ?
+`
+
+type RidesGetByIdRow struct {
+	ID             string         `json:"id"`
+	LocationFrom   string         `json:"locationFrom"`
+	LocationTo     string         `json:"locationTo"`
+	TackingPlaceAt string         `json:"tackingPlaceAt"`
+	CreatedBy      string         `json:"createdBy"`
+	CreatedAt      sql.NullString `json:"createdAt"`
+	TransportLimit int64          `json:"transportLimit"`
+	Driver         string         `json:"driver"`
+	DriverEmail    string         `json:"driverEmail"`
+}
+
+func (q *Queries) RidesGetById(ctx context.Context, id string) (RidesGetByIdRow, error) {
+	row := q.db.QueryRowContext(ctx, ridesGetById, id)
+	var i RidesGetByIdRow
+	err := row.Scan(
+		&i.ID,
+		&i.LocationFrom,
+		&i.LocationTo,
+		&i.TackingPlaceAt,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.TransportLimit,
+		&i.Driver,
+		&i.DriverEmail,
+	)
+	return i, err
+}
+
 const ridesGetMany = `-- name: RidesGetMany :many
 SELECT
     rides.id,
@@ -81,7 +128,7 @@ OFFSET
 `
 
 type RidesGetManyRow struct {
-	ID             int64          `json:"id"`
+	ID             string         `json:"id"`
 	LocationFrom   string         `json:"locationFrom"`
 	LocationTo     string         `json:"locationTo"`
 	TackingPlaceAt string         `json:"tackingPlaceAt"`

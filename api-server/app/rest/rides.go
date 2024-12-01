@@ -1,7 +1,9 @@
 package rest
 
 import (
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
 	"net/http"
@@ -15,6 +17,7 @@ import (
 func rideHandlers(h *http.ServeMux) {
 	h.HandleFunc("POST /rides", handle(createRide).with(bearerAuth(false)).build())
 	h.HandleFunc("GET /rides/many", handle(getManyRides).with(bearerAuth(false)).build())
+	h.HandleFunc("GET /rides/by-id/{id}", handle(getRideById).with(bearerAuth(false)).build())
 }
 
 type createRideParams struct {
@@ -95,6 +98,33 @@ func getManyRides(w http.ResponseWriter, r *http.Request) {
 	}
 
 	assert.Nil(err, "Failed to serialize rides.")
+	w.WriteHeader(200)
+	w.Write(resp)
+}
+
+func getRideById(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		httpWriteErr(w, http.StatusBadRequest, "Must provide 'id' path parameter.")
+		return
+	}
+
+	ride, err := state.queries.RidesGetById(r.Context(), id)
+	log.Println(err)
+	if errors.Is(err, sql.ErrNoRows) {
+		httpWriteErr(w, http.StatusNotFound, "No ride with the provide 'id' exists.")
+		return
+	}
+
+	if err != nil {
+		log.Println("Error: Failed to get ride.", "error:", err)
+		httpWriteErr(w, http.StatusInternalServerError, "Failed to get rides.")
+		return
+	}
+
+	var resp []byte
+	resp, err = json.Marshal(ride)
+	assert.Nil(err, "Failed to serialize ride.")
 	w.WriteHeader(200)
 	w.Write(resp)
 }

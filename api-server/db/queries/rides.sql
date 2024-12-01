@@ -35,3 +35,21 @@ LIMIT
     50
 OFFSET
     ?;
+
+
+-- name: RidesGetById :one
+SELECT
+    rides.id,
+    location_from,
+    location_to,
+    tacking_place_at,
+    created_by,
+    created_at,
+    transport_limit,
+    driver,
+    users.email AS driver_email
+FROM
+    rides
+    INNER JOIN users ON rides.driver = users.id
+WHERE
+    rides.id = ?;

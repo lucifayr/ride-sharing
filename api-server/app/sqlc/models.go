@@ -9,7 +9,7 @@ import (
 )
 
 type Ride struct {
-	ID             int64          `json:"id"`
+	ID             string         `json:"id"`
 	LocationFrom   string         `json:"locationFrom"`
 	LocationTo     string         `json:"locationTo"`
 	TackingPlaceAt string         `json:"tackingPlaceAt"`

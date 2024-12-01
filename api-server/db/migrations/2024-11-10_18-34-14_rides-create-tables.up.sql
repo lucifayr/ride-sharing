@@ -1,5 +1,5 @@
 CREATE TABLE rides (
-    id INTEGER PRIMARY KEY,
+    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(8)))),
     location_from TEXT NOT NULL,
     location_to TEXT NOT NULL,
     tacking_place_at TEXT NOT NULL CHECK (
