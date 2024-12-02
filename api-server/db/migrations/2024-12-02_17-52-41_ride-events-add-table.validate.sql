@@ -1,0 +1,9 @@
+SELECT
+    id,
+    ride_id,
+    location_from,
+    location_to,
+    driver,
+    tacking_place_at
+FROM
+    ride_events;

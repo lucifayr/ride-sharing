@@ -9,14 +9,25 @@ import (
 )
 
 type Ride struct {
+	ID                string         `json:"id"`
+	LocationFrom      string         `json:"locationFrom"`
+	LocationTo        string         `json:"locationTo"`
+	TackingPlaceAt    string         `json:"tackingPlaceAt"`
+	CreatedBy         string         `json:"createdBy"`
+	Driver            string         `json:"driver"`
+	TransportLimit    int64          `json:"transportLimit"`
+	CreatedAt         string         `json:"createdAt"`
+	RecurringInterval sql.NullInt64  `json:"recurringInterval"`
+	RecurringUnit     sql.NullString `json:"recurringUnit"`
+}
+
+type RideEvent struct {
 	ID             string `json:"id"`
+	RideID         string `json:"rideId"`
 	LocationFrom   string `json:"locationFrom"`
 	LocationTo     string `json:"locationTo"`
-	TackingPlaceAt string `json:"tackingPlaceAt"`
-	CreatedBy      string `json:"createdBy"`
 	Driver         string `json:"driver"`
-	TransportLimit int64  `json:"transportLimit"`
-	CreatedAt      string `json:"createdAt"`
+	TackingPlaceAt string `json:"tackingPlaceAt"`
 }
 
 type RideParticipant struct {

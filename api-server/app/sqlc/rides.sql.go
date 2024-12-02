@@ -20,7 +20,7 @@ INSERT INTO
         transport_limit
     )
 VALUES
-    (?, ?, ?, ?, ?, ?) RETURNING id, location_from, location_to, tacking_place_at, created_by, driver, transport_limit, created_at
+    (?, ?, ?, ?, ?, ?) RETURNING id, location_from, location_to, tacking_place_at, created_by, driver, transport_limit, created_at, recurring_interval, recurring_unit
 `
 
 type RidesCreateParams struct {
@@ -53,6 +53,8 @@ func (q *Queries) RidesCreate(ctx context.Context, arg RidesCreateParams) (Ride,
 		&i.Driver,
 		&i.TransportLimit,
 		&i.CreatedAt,
+		&i.RecurringInterval,
+		&i.RecurringUnit,
 	)
 	return i, err
 }
