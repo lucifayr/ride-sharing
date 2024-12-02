@@ -1,8 +1,6 @@
 import { useState } from "react";
-import { useScheduledRideGroupsStore } from "../stores";
 
 export const GroupBar = () => {
-  //const { groups } = useScheduledRideGroupsStore();
   const groups = [
     {
       groupName: "Group1",

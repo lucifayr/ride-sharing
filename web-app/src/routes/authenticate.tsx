@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { AuthTokens } from "../lib/stores";
+import { AuthTokens } from "../lib/models/user";
 
 export const Route = createFileRoute("/authenticate")({
   validateSearch: validateAuthTokens,
