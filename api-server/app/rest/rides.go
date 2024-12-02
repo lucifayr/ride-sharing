@@ -15,9 +15,9 @@ import (
 )
 
 func rideHandlers(h *http.ServeMux) {
-	h.HandleFunc("POST /rides", handle(createRide).with(bearerAuth(false)).build())
-	h.HandleFunc("GET /rides/many", handle(getManyRides).with(bearerAuth(false)).build())
-	h.HandleFunc("GET /rides/by-id/{id}", handle(getRideById).with(bearerAuth(false)).build())
+	h.HandleFunc("POST /rides", handle(createRide).with(allowCors).with(bearerAuth(false)).build())
+	h.HandleFunc("GET /rides/many", handle(getManyRides).with(allowCors).with(bearerAuth(false)).build())
+	h.HandleFunc("GET /rides/by-id/{id}", handle(getRideById).with(allowCors).with(bearerAuth(false)).build())
 }
 
 type createRideParams struct {

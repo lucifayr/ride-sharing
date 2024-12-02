@@ -34,8 +34,8 @@ var googleOauthConfig = &oauth2.Config{
 }
 
 func authHandlersGoogle(h *http.ServeMux) {
-	h.HandleFunc("GET /auth/google/login", oauthLoginGoogle)
-	h.HandleFunc("GET /auth/google/callback", oauthCallbackGoogle)
+	h.HandleFunc("GET /auth/google/login", handle(oauthLoginGoogle).with(allowCors).build())
+	h.HandleFunc("GET /auth/google/callback", handle(oauthCallbackGoogle).with(allowCors).build())
 }
 
 func oauthLoginGoogle(w http.ResponseWriter, r *http.Request) {

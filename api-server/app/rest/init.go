@@ -3,7 +3,9 @@ package rest
 import (
 	"context"
 	"net/http"
+	"ride_sharing_api/app/common"
 	sqlc "ride_sharing_api/app/sqlc"
+	"ride_sharing_api/app/utils"
 	"sync"
 	"time"
 )
@@ -70,6 +72,13 @@ func (b *handleFuncBuilder) build() func(w http.ResponseWriter, r *http.Request)
 		ctx := context.WithValue(r.Context(), middlewareKey, b.data)
 		b.handler(w, r.WithContext(ctx))
 	}
+}
+
+func allowCors(w http.ResponseWriter, r *http.Request) (bool, *middlewareData) {
+	w.Header().Set("Access-Control-Allow-Origin", utils.GetEnvRequired(common.ENV_CORS_ORIGIN))
+	w.Header().Set("Access-Control-Allow-Methods", "*")
+
+	return false, nil
 }
 
 func bearerAuth(ignoreExpired bool) func(w http.ResponseWriter, r *http.Request) (bool, *middlewareData) {
