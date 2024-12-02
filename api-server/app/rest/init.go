@@ -41,7 +41,7 @@ func NewRESTApi(queries *sqlc.Queries) http.Handler {
 	rideHandlers(mux)
 
 	return cors.New(cors.Options{
-		AllowedOrigins:   []string{"*"},
+		AllowedOrigins:   []string{"https://junegschwantner.com:12404"},
 		AllowCredentials: true,
 	}).Handler(mux)
 }
