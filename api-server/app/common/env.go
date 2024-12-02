@@ -2,7 +2,6 @@ package common
 
 const (
 	ENV_NO_TLS               = "RS_NO_TLS"
-	ENV_CORS_ORIGIN          = "RS_CORS_ORIGIN"
 	ENV_TLS_KEY              = "RS_TLS_KEY"
 	ENV_TLS_CERT             = "RS_TLS_CERT"
 	ENV_DB_NAME              = "RS_DB_NAME"
