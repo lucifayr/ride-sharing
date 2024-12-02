@@ -3,6 +3,8 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
+	"strings"
 
 	"ride_sharing_api/app/common"
 	"ride_sharing_api/app/rest"
@@ -31,10 +33,21 @@ func main() {
 	}
 
 	log.Println("Listening on", server.Addr)
-	err = server.ListenAndServe()
-	if err != nil {
-		log.Fatalln(err)
+
+	if strings.ToLower(os.Getenv(common.ENV_NO_TLS)) == "true" {
+		err = server.ListenAndServe()
+		if err != nil {
+			log.Fatalln(err)
+		} else {
+			log.Println("Closing HTTP server.")
+		}
 	} else {
-		log.Println("Closing HTTP server.")
+		err = server.ListenAndServeTLS(utils.GetEnvRequired(common.ENV_TLS_CERT), utils.GetEnvRequired(common.ENV_TLS_KEY))
+		if err != nil {
+			log.Fatalln(err)
+		} else {
+			log.Println("Closing HTTP server.")
+		}
 	}
+
 }

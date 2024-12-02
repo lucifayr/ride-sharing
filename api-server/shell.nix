@@ -14,6 +14,7 @@ pkgs.mkShell {
   RS_HOST_ADDR = "127.0.0.1:8000";
   RS_WEB_APP_URL = "http://127.0.0.1:5173";
   RS_SECRET_AUTH_TOKEN = "03**CsL@pfFmtt5K4LE*SVYXPseFZ^FO";
+  RS_NO_TLS = "true";
   # dev-only client id & secret
   RS_GOOGLE_REDIRECT_URL = "http://127.0.0.1:8000/auth/google/callback";
   RS_GOOGLE_CLIENT_ID = "750385423567-8vu2cst8njm4d6ple8e424ltpd9dh9t2.apps.googleusercontent.com";
