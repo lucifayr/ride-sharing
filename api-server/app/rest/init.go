@@ -35,6 +35,8 @@ func NewRESTApi(queries *sqlc.Queries) http.Handler {
 	state = &apiState{oauthStates: make(map[string]time.Time), queries: queries}
 
 	mux := http.NewServeMux()
+	mux.HandleFunc("OPTIONS /*", handle(respondOk).with(allowCors).build())
+
 	authHandlers(mux)
 	authHandlersGoogle(mux)
 	userHandlers(mux)
@@ -72,6 +74,10 @@ func (b *handleFuncBuilder) build() func(w http.ResponseWriter, r *http.Request)
 		ctx := context.WithValue(r.Context(), middlewareKey, b.data)
 		b.handler(w, r.WithContext(ctx))
 	}
+}
+
+func respondOk(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
 }
 
 func allowCors(w http.ResponseWriter, r *http.Request) (bool, *middlewareData) {
