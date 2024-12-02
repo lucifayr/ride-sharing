@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { LoadingSpinner } from "../lib/components/Spinner";
 import { useUserStore } from "../lib/stores";
 import { useQuery } from "@tanstack/react-query";
-import { QUERY_KEYS } from "../lib/query";
+import { QUERY_KEYS } from "../lib/utils";
 import { Ride } from "../lib/models/ride";
 import { AuthTokens } from "../lib/models/user";
 

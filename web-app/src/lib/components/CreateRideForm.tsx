@@ -3,9 +3,9 @@ import { LoadingSpinner } from "./Spinner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useUserStore } from "../stores";
 import { useNavigate } from "@tanstack/react-router";
-import { QUERY_KEYS } from "../query";
+import { QUERY_KEYS, STYLES } from "../utils";
 
-export function CreateRideForm() {
+export function CreateRideForm({ afterSubmit }: { afterSubmit?: () => void }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useUserStore();
@@ -48,11 +48,12 @@ export function CreateRideForm() {
     defaultValues,
     onSubmit: async ({ value }) => {
       await createRide.mutateAsync(value);
+      afterSubmit?.();
     },
   });
 
   return (
-    <div className="flex h-full flex-col items-center gap-8">
+    <div className="flex h-full flex-col items-center gap-8 bg-neutral-200 dark:bg-neutral-800 dark:text-white">
       <div className="neutral-cyan-700 rounded-lg border-2 p-10">
         <h2 className="doto-h2">Create a Ride</h2>
         <form
@@ -173,7 +174,7 @@ export function CreateRideForm() {
             children={([canSubmit, isSubmitting]) => (
               <button
                 type="submit"
-                className="mt-2 flex items-center justify-center rounded bg-cyan-700 p-2 duration-150 hover:bg-cyan-600"
+                className={`mt-2 flex items-center justify-center ${STYLES.button}`}
                 disabled={!canSubmit}
               >
                 {isSubmitting ? (

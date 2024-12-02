@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+dialog::backdrop {
+        backdrop-filter: blur(2px);
+}
+
 .doto-h2 {
   font-family: "Doto", sans-serif;
   font-optical-sizing: auto;

@@ -5,8 +5,8 @@ import { CreateRideForm } from "../lib/components/CreateRideForm";
 import { useQuery } from "@tanstack/react-query";
 import { Ride } from "../lib/models/ride";
 import { AuthTokens } from "../lib/models/user";
-import { ReactNode } from "react";
-import { QUERY_KEYS } from "../lib/query";
+import { ReactNode, useRef } from "react";
+import { STYLES, QUERY_KEYS } from "../lib/utils";
 
 export const Route = createLazyFileRoute("/dashboard")({
   component: DashBoard,
@@ -15,6 +15,8 @@ export const Route = createLazyFileRoute("/dashboard")({
 function DashBoard() {
   const { user } = useUserStore();
   const navigate = useNavigate();
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
   if (user.type !== "logged-in") {
     navigate({ to: "/" });
     return <LoadingSpinner content={<span>Redirecting to login...</span>} />;
@@ -22,8 +24,25 @@ function DashBoard() {
 
   return (
     <div className="flex gap-8">
-      <CreateRideForm />
-      <RideList tokens={user.tokens} />
+      <div className="flex w-full flex-col gap-2">
+        <div className="flex min-h-32 items-center justify-center">
+          <button
+            className={`text-2xl ${STYLES.button}`}
+            onClick={() => {
+              dialogRef.current?.showModal();
+            }}
+          >
+            Create a Ride
+          </button>
+        </div>
+        <RideList tokens={user.tokens} />
+        <dialog
+          className="bg-transparent"
+          ref={dialogRef}
+        >
+          <CreateRideForm afterSubmit={() => dialogRef.current?.close()} />
+        </dialog>
+      </div>
     </div>
   );
 }
@@ -80,7 +99,7 @@ function RideList({ tokens }: { tokens: AuthTokens }) {
   }
 
   return (
-    <table className="relative h-fit table-auto overflow-x-auto text-lg">
+    <table className="relative h-fit w-full max-w-full table-auto overflow-x-auto text-lg">
       <thead className="uppercase">
         <RideListRow
           isHeading={true}
@@ -129,7 +148,7 @@ function RideListRow({
 }) {
   return (
     <tr
-      className={`border-neutral-300 dark:border-neutral-600 ${!isHeading ? "cursor-pointer" : ""} ${!isLast && !isHeading ? "border-b" : ""} ${isHeading ? "bg-neutral-200 dark:bg-neutral-700" : "bg-neutral-100 dark:bg-neutral-800"}`}
+      className={`border-neutral-300 dark:border-neutral-600 ${!isHeading ? "cursor-pointer" : ""} ${!isLast && !isHeading ? "border-b" : ""} ${isHeading ? "sticky top-0 bg-neutral-200 dark:bg-neutral-700" : "bg-neutral-100 dark:bg-neutral-800"}`}
       onClick={onClick}
     >
       {values.map((value, idx) => {
@@ -137,7 +156,7 @@ function RideListRow({
           return (
             <th
               key={idx}
-              className="px-4 py-2"
+              className="px-4 py-2 text-left"
             >
               {value}
             </th>
