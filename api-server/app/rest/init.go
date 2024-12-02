@@ -3,9 +3,7 @@ package rest
 import (
 	"context"
 	"net/http"
-	"ride_sharing_api/app/common"
 	sqlc "ride_sharing_api/app/sqlc"
-	"ride_sharing_api/app/utils"
 	"sync"
 	"time"
 )
