@@ -8,7 +8,7 @@ import (
 )
 
 func userHandlers(h *http.ServeMux) {
-	h.HandleFunc("GET /users/me", handle(getUserMe).with(allowCors).with(bearerAuth(false)).build())
+	h.HandleFunc("GET /users/me", handle(getUserMe).with(bearerAuth(false)).build())
 }
 
 func getUserMe(w http.ResponseWriter, r *http.Request) {

@@ -38,7 +38,7 @@ type accessToken struct {
 }
 
 func authHandlers(h *http.ServeMux) {
-	h.HandleFunc("POST /auth/refresh", handle(refreshAuthTokens).with(allowCors).with(bearerAuth(true)).build())
+	h.HandleFunc("POST /auth/refresh", handle(refreshAuthTokens).with(bearerAuth(true)).build())
 }
 
 type refreshAuthTokensBody struct {
