@@ -81,7 +81,7 @@ func respondOk(w http.ResponseWriter, r *http.Request) {
 }
 
 func allowCors(w http.ResponseWriter, r *http.Request) (bool, *middlewareData) {
-	w.Header().Set("Access-Control-Allow-Origin", utils.GetEnvRequired(common.ENV_WEB_APP_URL))
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "*")
 
 	return false, nil
