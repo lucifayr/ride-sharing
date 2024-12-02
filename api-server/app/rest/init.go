@@ -40,7 +40,10 @@ func NewRESTApi(queries *sqlc.Queries) http.Handler {
 	userHandlers(mux)
 	rideHandlers(mux)
 
-	return cors.Default().Handler(mux)
+	return cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowCredentials: true,
+	}).Handler(mux)
 }
 
 func handle(handler func(w http.ResponseWriter, r *http.Request)) *handleFuncBuilder {
