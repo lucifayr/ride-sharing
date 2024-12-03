@@ -45,7 +45,6 @@ func oauthLoginGoogle(w http.ResponseWriter, r *http.Request) {
 	state.oauthStates[oauthState] = time.Now()
 	state.mutex.Unlock()
 
-	log.Println(googleOauthConfig.RedirectURL)
 	url := googleOauthConfig.AuthCodeURL(oauthState, oauth2.AccessTypeOffline, oauth2.ApprovalForce)
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
