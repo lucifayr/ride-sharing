@@ -2,7 +2,6 @@ package rest
 
 import (
 	"context"
-	"github.com/rs/cors"
 	"net/http"
 	sqlc "ride_sharing_api/app/sqlc"
 	"sync"
@@ -40,10 +39,7 @@ func NewRESTApi(queries *sqlc.Queries) http.Handler {
 	userHandlers(mux)
 	rideHandlers(mux)
 
-	return cors.New(cors.Options{
-		AllowedOrigins:   []string{"https://junegschwantner.com:12404"},
-		AllowCredentials: true,
-	}).Handler(mux)
+	return WithCors(mux)
 }
 
 func handle(handler func(w http.ResponseWriter, r *http.Request)) *handleFuncBuilder {
