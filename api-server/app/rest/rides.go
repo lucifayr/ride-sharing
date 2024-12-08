@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -14,10 +15,16 @@ import (
 	"time"
 )
 
+const (
+	RIDE_STATUS_DONE     = "done"
+	RIDE_STATUS_CANCELED = "canceled"
+	RIDE_STATUS_UPCOMING = "upcoming"
+)
+
 func rideHandlers(h *http.ServeMux) {
 	h.HandleFunc("POST /rides", handle(createRide).with(bearerAuth(false)).build())
-	h.HandleFunc("GET /rides/many", handle(getManyRides).with(bearerAuth(false)).build())
-	h.HandleFunc("GET /rides/by-id/{id}", handle(getRideById).with(bearerAuth(false)).build())
+	h.HandleFunc("GET /rides/many", handle(getNextRideById).with(bearerAuth(false)).build())
+	h.HandleFunc("GET /rides/by-id/{id}", handle(getNextRideById).with(bearerAuth(false)).build())
 }
 
 type createRideParams struct {
@@ -97,11 +104,19 @@ func createRide(w http.ResponseWriter, r *http.Request) {
 	w.Write(resp)
 }
 
+// TODO: update to handle new fields
 func getManyRides(w http.ResponseWriter, r *http.Request) {
 	var offset int64 = 0
 	offsetStr := r.FormValue("offset")
 	if parsed, err := strconv.ParseInt(offsetStr, 10, 64); err == nil && parsed > 0 {
 		offset = parsed
+	}
+
+	now := time.Now()
+	err := state.queries.RidesMarkPastEventsDone(r.Context(), now.UTC().Format(time.RFC3339))
+	if err != nil {
+		httpWriteErr(w, http.StatusInternalServerError, "Failed to update rides.")
+		return
 	}
 
 	rides, err := state.queries.RidesGetMany(r.Context(), offset)
@@ -123,16 +138,28 @@ func getManyRides(w http.ResponseWriter, r *http.Request) {
 	w.Write(resp)
 }
 
-func getRideById(w http.ResponseWriter, r *http.Request) {
+func getNextRideById(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
 		httpWriteErr(w, http.StatusBadRequest, "Must provide 'id' path parameter.")
 		return
 	}
 
-	ride, err := state.queries.RidesGetById(r.Context(), id)
+	now := time.Now()
+	err := state.queries.RidesMarkPastEventsDone(r.Context(), now.UTC().Format(time.RFC3339))
+	if err != nil {
+		httpWriteErr(w, http.StatusInternalServerError, "Failed to update rides.")
+		return
+	}
+
+	rideLatest, err := state.queries.RidesGetLatest(r.Context(), id)
 	if errors.Is(err, sql.ErrNoRows) {
 		httpWriteErr(w, http.StatusNotFound, "No ride with the provide 'id' exists.")
+		return
+	}
+
+	if rideLatest.Status != RIDE_STATUS_UPCOMING && !rideLatest.RideScheduleID.Valid {
+		httpWriteErr(w, http.StatusNotFound, "No next ride exists for the ride with 'id'.")
 		return
 	}
 
@@ -142,9 +169,99 @@ func getRideById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var weekdays *[]string = nil
+	if rideLatest.RideScheduleUnit.String == "weekdays" {
+		days, err := state.queries.RidesGetScheduleWeekdays(r.Context(), rideLatest.RideScheduleID.String)
+		weekdays = &days
+	}
+
+	var ride *rideEventData = nil
+	if rideLatest.Status != RIDE_STATUS_UPCOMING {
+		next, err := nextScheduledTime(now, rideLatest.RideScheduleID.String, rideLatest.RideScheduleUnit.String, rideLatest.RideScheduleInterval.Int64, weekdays)
+
+		argsCreateEvent := sqlc.RidesCreateEventParams{
+			RideID:         rideLatest.RideID,
+			LocationFrom:   rideLatest.BaseLocationFrom,
+			LocationTo:     rideLatest.BaseLocationTo,
+			TransportLimit: rideLatest.BaseTransportLimit,
+			Driver:         rideLatest.BaseDriver,
+			TackingPlaceAt: next.UTC().Format(time.RFC3339),
+		}
+
+		err = state.queries.RidesCreateEvent(r.Context(), argsCreateEvent)
+
+		rideNext, err := state.queries.RidesGetLatest(r.Context(), id)
+		ride, err = buildRideEventData(rideNext, weekdays)
+		return
+	} else {
+		ride, err = buildRideEventData(rideLatest, weekdays)
+	}
+
 	var resp []byte
 	resp, err = json.Marshal(ride)
 	assert.Nil(err, "Failed to serialize ride.")
 	w.WriteHeader(200)
 	w.Write(resp)
+}
+
+func buildRideEventData(ride sqlc.RidesGetLatestRow, weekdays *[]string) (*rideEventData, error) {
+	tackingPlaceAt, err := time.Parse(time.RFC3339, ride.TackingPlaceAt)
+	if err != nil {
+		return nil, err
+	}
+
+	var schedule *rideSchedule = nil
+	if ride.RideScheduleID.Valid {
+		schedule = &rideSchedule{
+			Unit:     ride.RideScheduleUnit.String,
+			Interval: ride.RideScheduleInterval.Int64,
+			Weekdays: weekdays,
+		}
+	}
+
+	rideEvent := rideEventData{
+		RideId:         ride.RideID,
+		RideEventId:    ride.RideEventID,
+		LocationFrom:   ride.LocationFrom,
+		LocationTo:     ride.LocationTo,
+		TackingPlaceAt: tackingPlaceAt,
+		Status:         ride.Status,
+		CreatedBy:      ride.CreatedBy,
+		CreatedByEmail: ride.CreatedByEmail,
+		DriverId:       ride.Driver,
+		DriverEmail:    ride.DriverEmail,
+		TransportLimit: ride.TransportLimit,
+		Schedule:       schedule,
+	}
+
+	return &rideEvent, nil
+}
+
+func nextScheduledTime(current time.Time, scheduleId string, scheduleUnit string, scheduleInterval int64, weekdays *[]string) (time.Time, error) {
+	switch scheduleUnit {
+	case "days":
+		{
+			return current.AddDate(0, 0, int(scheduleInterval)), nil
+		}
+	case "weeks":
+		{
+			return current.AddDate(0, 0, int(scheduleInterval)*7), nil
+		}
+	case "months":
+		{
+			return current.AddDate(0, int(scheduleInterval), 0), nil
+		}
+	case "years":
+		{
+			return current.AddDate(int(scheduleInterval), 0, 0), nil
+		}
+	case "weekdays":
+		{
+			return current, fmt.Errorf("TODO")
+		}
+	default:
+		{
+			return current, fmt.Errorf("Invalid schedule unit '%s'", scheduleUnit)
+		}
+	}
 }

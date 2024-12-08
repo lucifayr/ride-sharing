@@ -15,7 +15,7 @@ VALUES
     (?, ?, ?, ?, ?, ?) RETURNING id;
 
 
--- name: RidesCreateEvent :one
+-- name: RidesCreateEvent :exec
 INSERT INTO
     ride_events (
         ride_id,
@@ -26,7 +26,7 @@ INSERT INTO
         transport_limit
     )
 VALUES
-    (?, ?, ?, ?, ?, ?) RETURNING *;
+    (?, ?, ?, ?, ?, ?);
 
 
 -- name: RidesCreateSchedule :one
@@ -43,36 +43,51 @@ VALUES
     (?, ?);
 
 
--- name: RidesMarkPastEventsDone :many
+-- name: RidesMarkPastEventsDone :exec
 UPDATE ride_events
 SET
     status = 'done'
 WHERE
     status = 'upcoming'
-    AND tacking_place_at <= ? RETURNING *;
+    AND tacking_place_at <= ?;
 
 
--- name: RidesGetNextEvent :one
--- there should always only be one or zero future events
+-- name: RidesGetLatest :one
 SELECT
     r.id AS ride_id,
     re.id AS ride_event_id,
     re.location_from,
     re.location_to,
+    r.location_from AS base_location_from,
+    r.location_to AS base_location_to,
     re.tacking_place_at,
     r.created_by,
     re.transport_limit,
+    r.transport_limit AS base_transport_limit,
+    r.driver AS base_driver,
     re.driver,
+    re.status,
     ud.email AS driver_email,
-    uc.email AS created_by_email
+    uc.email AS created_by_email,
+    rs.id AS ride_schedule_id,
+    rs.unit AS ride_schedule_unit,
+    rs.interval AS ride_schedule_interval
 FROM
     ride_events re
     INNER JOIN rides r ON re.id = r.id
+    LEFT OUTER JOIN ride_schedules rs ON rs.ride_id = r.id
     INNER JOIN users ud ON r.driver = ud.id
     INNER JOIN users uc ON r.created_by = uc.id
 WHERE
-    re.status = 'upcoming'
-    AND re.tacking_place_at > ?;
+    re.ride_id = ?
+    AND re.tacking_place_at = (
+        SELECT
+            MAX(tacking_place_at)
+        FROM
+            ride_events
+        WHERE
+            id = re.id
+    );
 
 
 -- name: RidesGetSchedule :one
@@ -108,10 +123,14 @@ SELECT
     re.driver,
     re.status,
     ud.email AS driver_email,
-    uc.email AS created_by_email
+    uc.email AS created_by_email,
+    rs.id AS ride_schedule_id,
+    rs.unit AS ride_schedule_unit,
+    rs.interval AS ride_schedule_interval
 FROM
     ride_events re
     INNER JOIN rides r ON re.ride_id = r.id
+    LEFT OUTER JOIN ride_schedules rs ON rs.ride_id = r.id
     INNER JOIN users ud ON r.driver = ud.id
     INNER JOIN users uc ON r.created_by = uc.id
 ORDER BY
