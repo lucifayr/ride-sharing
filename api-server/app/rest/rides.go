@@ -28,6 +28,27 @@ type createRideParams struct {
 	TransportLimit *int64     `json:"transportLimit" validate:"required"`
 }
 
+type rideEventData struct {
+	RideId         string        `json:"rideId"`
+	RideEventId    string        `json:"rideEventId"`
+	LocationFrom   string        `json:"locationFrom"`
+	LocationTo     string        `json:"locationTo"`
+	TackingPlaceAt time.Time     `json:"tackingPlaceAt"`
+	Status         string        `json:"status"`
+	CreatedBy      string        `json:"createdBy"`
+	CreatedByEmail string        `json:"createdByEmail"`
+	DriverId       string        `json:"driverId"`
+	DriverEmail    string        `json:"driverEmail"`
+	TransportLimit int64         `json:"transportLimit"`
+	Schedule       *rideSchedule `json:"schedule"`
+}
+
+type rideSchedule struct {
+	Unit     string    `json:"unit"`
+	Interval int64     `json:"interval"`
+	Weekdays *[]string `json:"weekdays"`
+}
+
 func createRide(w http.ResponseWriter, r *http.Request) {
 	user := getMiddlewareData[sqlc.User](r, "user")
 

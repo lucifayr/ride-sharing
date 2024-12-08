@@ -25,12 +25,31 @@ type RideEvent struct {
 	LocationFrom   string `json:"locationFrom"`
 	LocationTo     string `json:"locationTo"`
 	Driver         string `json:"driver"`
+	Status         string `json:"status"`
 	TackingPlaceAt string `json:"tackingPlaceAt"`
+	TransportLimit int64  `json:"transportLimit"`
+}
+
+type RideEventStatusOrdering struct {
+	Status   string `json:"status"`
+	Ordering int64  `json:"ordering"`
 }
 
 type RideParticipant struct {
 	UserID string `json:"userId"`
 	RideID int64  `json:"rideId"`
+}
+
+type RideSchedule struct {
+	ID       string `json:"id"`
+	RideID   string `json:"rideId"`
+	Interval int64  `json:"interval"`
+	Unit     string `json:"unit"`
+}
+
+type RideScheduleWeekday struct {
+	RideScheduleID string `json:"rideScheduleId"`
+	Weekday        string `json:"weekday"`
 }
 
 type User struct {

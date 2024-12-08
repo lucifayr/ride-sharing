@@ -1,8 +1,0 @@
--- ALTER TABLE rides
--- ADD recurring_interval INTEGER CHECK (recurring_interval > 0);
---
---
--- ALTER TABLE rides
--- ADD recurring_unit TEXT CHECK (
---     recurring_unit IN ("day", "week", "month", "year")
--- );

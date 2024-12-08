@@ -4,7 +4,25 @@ CREATE TABLE ride_events (
     location_from TEXT NOT NULL,
     location_to TEXT NOT NULL,
     driver TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('upcoming', 'done', 'canceled')) DEFAULT ('upcoming'),
     tacking_place_at TEXT NOT NULL CHECK (
         tacking_place_at = strftime('%Y-%m-%dT%H:%M:%SZ', tacking_place_at)
-    )
+    ),
+    transport_limit INTEGER NOT NULL CHECK (transport_limit > 0),
+    FOREIGN KEY (ride_id) REFERENCES rides (id),
+    FOREIGN KEY (driver) REFERENCES users (id)
 );
+
+
+CREATE TABLE ride_event_status_ordering (
+    status TEXT PRIMARY KEY,
+    ordering INTEGER NOT NULL
+);
+
+
+INSERT INTO
+    ride_event_status_ordering (status, ordering)
+VALUES
+    ('upcoming', 32),
+    ('done', 64),
+    ('canceled', 128);

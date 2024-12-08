@@ -20,7 +20,7 @@ INSERT INTO
         transport_limit
     )
 VALUES
-    (?, ?, ?, ?, ?, ?) RETURNING id, location_from, location_to, tacking_place_at, created_by, driver, transport_limit, created_at
+    (?, ?, ?, ?, ?, ?) RETURNING id
 `
 
 type RidesCreateParams struct {
@@ -34,7 +34,7 @@ type RidesCreateParams struct {
 
 // See sqlc docs for more information:
 // https://docs.sqlc.dev/en/latest/tutorials/getting-started-sqlite.html#schema-and-queries
-func (q *Queries) RidesCreate(ctx context.Context, arg RidesCreateParams) (Ride, error) {
+func (q *Queries) RidesCreate(ctx context.Context, arg RidesCreateParams) (string, error) {
 	row := q.db.QueryRowContext(ctx, ridesCreate,
 		arg.LocationFrom,
 		arg.LocationTo,
@@ -43,89 +43,122 @@ func (q *Queries) RidesCreate(ctx context.Context, arg RidesCreateParams) (Ride,
 		arg.Driver,
 		arg.TransportLimit,
 	)
-	var i Ride
-	err := row.Scan(
-		&i.ID,
-		&i.LocationFrom,
-		&i.LocationTo,
-		&i.TackingPlaceAt,
-		&i.CreatedBy,
-		&i.Driver,
-		&i.TransportLimit,
-		&i.CreatedAt,
-	)
-	return i, err
+	var id string
+	err := row.Scan(&id)
+	return id, err
 }
 
-const ridesGetById = `-- name: RidesGetById :one
-SELECT
-    rides.id,
-    location_from,
-    location_to,
-    tacking_place_at,
-    created_by,
-    created_at,
-    transport_limit,
-    driver,
-    ud.email AS driver_email,
-    uc.email AS created_by_email
-FROM
-    rides
-    INNER JOIN users ud ON rides.driver = ud.id
-    INNER JOIN users uc ON rides.created_by = uc.id
-WHERE
-    rides.id = ?
+const ridesCreateEvent = `-- name: RidesCreateEvent :one
+INSERT INTO
+    ride_events (
+        ride_id,
+        location_from,
+        location_to,
+        driver,
+        tacking_Place_at,
+        transport_limit
+    )
+VALUES
+    (?, ?, ?, ?, ?, ?) RETURNING id, ride_id, location_from, location_to, driver, status, tacking_place_at, transport_limit
 `
 
-type RidesGetByIdRow struct {
-	ID             string `json:"id"`
+type RidesCreateEventParams struct {
+	RideID         string `json:"rideId"`
 	LocationFrom   string `json:"locationFrom"`
 	LocationTo     string `json:"locationTo"`
-	TackingPlaceAt string `json:"tackingPlaceAt"`
-	CreatedBy      string `json:"createdBy"`
-	CreatedAt      string `json:"createdAt"`
-	TransportLimit int64  `json:"transportLimit"`
 	Driver         string `json:"driver"`
-	DriverEmail    string `json:"driverEmail"`
-	CreatedByEmail string `json:"createdByEmail"`
+	TackingPlaceAt string `json:"tackingPlaceAt"`
+	TransportLimit int64  `json:"transportLimit"`
 }
 
-func (q *Queries) RidesGetById(ctx context.Context, id string) (RidesGetByIdRow, error) {
-	row := q.db.QueryRowContext(ctx, ridesGetById, id)
-	var i RidesGetByIdRow
+func (q *Queries) RidesCreateEvent(ctx context.Context, arg RidesCreateEventParams) (RideEvent, error) {
+	row := q.db.QueryRowContext(ctx, ridesCreateEvent,
+		arg.RideID,
+		arg.LocationFrom,
+		arg.LocationTo,
+		arg.Driver,
+		arg.TackingPlaceAt,
+		arg.TransportLimit,
+	)
+	var i RideEvent
 	err := row.Scan(
 		&i.ID,
+		&i.RideID,
 		&i.LocationFrom,
 		&i.LocationTo,
-		&i.TackingPlaceAt,
-		&i.CreatedBy,
-		&i.CreatedAt,
-		&i.TransportLimit,
 		&i.Driver,
-		&i.DriverEmail,
-		&i.CreatedByEmail,
+		&i.Status,
+		&i.TackingPlaceAt,
+		&i.TransportLimit,
 	)
 	return i, err
+}
+
+const ridesCreateSchedule = `-- name: RidesCreateSchedule :one
+INSERT INTO
+    ride_schedules (ride_id, interval, unit)
+VALUES
+    (?, ?, ?) RETURNING id
+`
+
+type RidesCreateScheduleParams struct {
+	RideID   string `json:"rideId"`
+	Interval int64  `json:"interval"`
+	Unit     string `json:"unit"`
+}
+
+func (q *Queries) RidesCreateSchedule(ctx context.Context, arg RidesCreateScheduleParams) (string, error) {
+	row := q.db.QueryRowContext(ctx, ridesCreateSchedule, arg.RideID, arg.Interval, arg.Unit)
+	var id string
+	err := row.Scan(&id)
+	return id, err
+}
+
+const ridesCreateScheduleWeekday = `-- name: RidesCreateScheduleWeekday :exec
+INSERT INTO
+    ride_schedule_weekdays (ride_schedule_id, weekday)
+VALUES
+    (?, ?)
+`
+
+type RidesCreateScheduleWeekdayParams struct {
+	RideScheduleID string `json:"rideScheduleId"`
+	Weekday        string `json:"weekday"`
+}
+
+func (q *Queries) RidesCreateScheduleWeekday(ctx context.Context, arg RidesCreateScheduleWeekdayParams) error {
+	_, err := q.db.ExecContext(ctx, ridesCreateScheduleWeekday, arg.RideScheduleID, arg.Weekday)
+	return err
 }
 
 const ridesGetMany = `-- name: RidesGetMany :many
 SELECT
-    rides.id,
-    location_from,
-    location_to,
-    tacking_place_at,
-    created_by,
-    created_at,
-    transport_limit,
-    driver,
+    r.id AS ride_id,
+    re.id AS ride_event_id,
+    re.location_from,
+    re.location_to,
+    re.tacking_place_at,
+    r.created_by,
+    re.transport_limit,
+    re.driver,
+    re.status,
     ud.email AS driver_email,
     uc.email AS created_by_email
 FROM
-    rides
-    INNER JOIN users ud ON rides.driver = ud.id
-    INNER JOIN users uc ON rides.created_by = uc.id
+    ride_events re
+    INNER JOIN rides r ON re.ride_id = r.id
+    INNER JOIN users ud ON r.driver = ud.id
+    INNER JOIN users uc ON r.created_by = uc.id
 ORDER BY
-    created_at DESC
+    (
+        SELECT
+            ordering
+        FROM
+            ride_event_status_ordering
+        WHERE
+            status = re.status
+    ),
+    tacking_place_at DESC
 LIMIT
     50
 OFFSET
@@ -133,14 +166,15 @@ OFFSET
 `
 
 type RidesGetManyRow struct {
-	ID             string `json:"id"`
+	RideID         string `json:"rideId"`
+	RideEventID    string `json:"rideEventId"`
 	LocationFrom   string `json:"locationFrom"`
 	LocationTo     string `json:"locationTo"`
 	TackingPlaceAt string `json:"tackingPlaceAt"`
 	CreatedBy      string `json:"createdBy"`
-	CreatedAt      string `json:"createdAt"`
 	TransportLimit int64  `json:"transportLimit"`
 	Driver         string `json:"driver"`
+	Status         string `json:"status"`
 	DriverEmail    string `json:"driverEmail"`
 	CreatedByEmail string `json:"createdByEmail"`
 }
@@ -155,16 +189,168 @@ func (q *Queries) RidesGetMany(ctx context.Context, offset int64) ([]RidesGetMan
 	for rows.Next() {
 		var i RidesGetManyRow
 		if err := rows.Scan(
-			&i.ID,
+			&i.RideID,
+			&i.RideEventID,
 			&i.LocationFrom,
 			&i.LocationTo,
 			&i.TackingPlaceAt,
 			&i.CreatedBy,
-			&i.CreatedAt,
 			&i.TransportLimit,
 			&i.Driver,
+			&i.Status,
 			&i.DriverEmail,
 			&i.CreatedByEmail,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const ridesGetNextEvent = `-- name: RidesGetNextEvent :one
+SELECT
+    r.id AS ride_id,
+    re.id AS ride_event_id,
+    re.location_from,
+    re.location_to,
+    re.tacking_place_at,
+    r.created_by,
+    re.transport_limit,
+    re.driver,
+    ud.email AS driver_email,
+    uc.email AS created_by_email
+FROM
+    ride_events re
+    INNER JOIN rides r ON re.id = r.id
+    INNER JOIN users ud ON r.driver = ud.id
+    INNER JOIN users uc ON r.created_by = uc.id
+WHERE
+    re.status = 'upcoming'
+    AND re.tacking_place_at > ?
+`
+
+type RidesGetNextEventRow struct {
+	RideID         string `json:"rideId"`
+	RideEventID    string `json:"rideEventId"`
+	LocationFrom   string `json:"locationFrom"`
+	LocationTo     string `json:"locationTo"`
+	TackingPlaceAt string `json:"tackingPlaceAt"`
+	CreatedBy      string `json:"createdBy"`
+	TransportLimit int64  `json:"transportLimit"`
+	Driver         string `json:"driver"`
+	DriverEmail    string `json:"driverEmail"`
+	CreatedByEmail string `json:"createdByEmail"`
+}
+
+// there should always only be one or zero future events
+func (q *Queries) RidesGetNextEvent(ctx context.Context, tackingPlaceAt string) (RidesGetNextEventRow, error) {
+	row := q.db.QueryRowContext(ctx, ridesGetNextEvent, tackingPlaceAt)
+	var i RidesGetNextEventRow
+	err := row.Scan(
+		&i.RideID,
+		&i.RideEventID,
+		&i.LocationFrom,
+		&i.LocationTo,
+		&i.TackingPlaceAt,
+		&i.CreatedBy,
+		&i.TransportLimit,
+		&i.Driver,
+		&i.DriverEmail,
+		&i.CreatedByEmail,
+	)
+	return i, err
+}
+
+const ridesGetSchedule = `-- name: RidesGetSchedule :one
+SELECT
+    id,
+    ride_id,
+    interval,
+    unit
+FROM
+    ride_schedules
+WHERE
+    ride_id = ?
+`
+
+func (q *Queries) RidesGetSchedule(ctx context.Context, rideID string) (RideSchedule, error) {
+	row := q.db.QueryRowContext(ctx, ridesGetSchedule, rideID)
+	var i RideSchedule
+	err := row.Scan(
+		&i.ID,
+		&i.RideID,
+		&i.Interval,
+		&i.Unit,
+	)
+	return i, err
+}
+
+const ridesGetScheduleWeekdays = `-- name: RidesGetScheduleWeekdays :many
+SELECT
+    weekday
+FROM
+    ride_schedule_weekdays
+WHERE
+    ride_schedule_id = ?
+`
+
+func (q *Queries) RidesGetScheduleWeekdays(ctx context.Context, rideScheduleID string) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, ridesGetScheduleWeekdays, rideScheduleID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var weekday string
+		if err := rows.Scan(&weekday); err != nil {
+			return nil, err
+		}
+		items = append(items, weekday)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const ridesMarkPastEventsDone = `-- name: RidesMarkPastEventsDone :many
+UPDATE ride_events
+SET
+    status = 'done'
+WHERE
+    status = 'upcoming'
+    AND tacking_place_at <= ? RETURNING id, ride_id, location_from, location_to, driver, status, tacking_place_at, transport_limit
+`
+
+func (q *Queries) RidesMarkPastEventsDone(ctx context.Context, tackingPlaceAt string) ([]RideEvent, error) {
+	rows, err := q.db.QueryContext(ctx, ridesMarkPastEventsDone, tackingPlaceAt)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []RideEvent
+	for rows.Next() {
+		var i RideEvent
+		if err := rows.Scan(
+			&i.ID,
+			&i.RideID,
+			&i.LocationFrom,
+			&i.LocationTo,
+			&i.Driver,
+			&i.Status,
+			&i.TackingPlaceAt,
+			&i.TransportLimit,
 		); err != nil {
 			return nil, err
 		}

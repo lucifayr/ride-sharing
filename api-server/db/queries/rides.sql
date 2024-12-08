@@ -12,48 +12,119 @@ INSERT INTO
         transport_limit
     )
 VALUES
+    (?, ?, ?, ?, ?, ?) RETURNING id;
+
+
+-- name: RidesCreateEvent :one
+INSERT INTO
+    ride_events (
+        ride_id,
+        location_from,
+        location_to,
+        driver,
+        tacking_Place_at,
+        transport_limit
+    )
+VALUES
     (?, ?, ?, ?, ?, ?) RETURNING *;
+
+
+-- name: RidesCreateSchedule :one
+INSERT INTO
+    ride_schedules (ride_id, interval, unit)
+VALUES
+    (?, ?, ?) RETURNING id;
+
+
+-- name: RidesCreateScheduleWeekday :exec
+INSERT INTO
+    ride_schedule_weekdays (ride_schedule_id, weekday)
+VALUES
+    (?, ?);
+
+
+-- name: RidesMarkPastEventsDone :many
+UPDATE ride_events
+SET
+    status = 'done'
+WHERE
+    status = 'upcoming'
+    AND tacking_place_at <= ? RETURNING *;
+
+
+-- name: RidesGetNextEvent :one
+-- there should always only be one or zero future events
+SELECT
+    r.id AS ride_id,
+    re.id AS ride_event_id,
+    re.location_from,
+    re.location_to,
+    re.tacking_place_at,
+    r.created_by,
+    re.transport_limit,
+    re.driver,
+    ud.email AS driver_email,
+    uc.email AS created_by_email
+FROM
+    ride_events re
+    INNER JOIN rides r ON re.id = r.id
+    INNER JOIN users ud ON r.driver = ud.id
+    INNER JOIN users uc ON r.created_by = uc.id
+WHERE
+    re.status = 'upcoming'
+    AND re.tacking_place_at > ?;
+
+
+-- name: RidesGetSchedule :one
+SELECT
+    id,
+    ride_id,
+    interval,
+    unit
+FROM
+    ride_schedules
+WHERE
+    ride_id = ?;
+
+
+-- name: RidesGetScheduleWeekdays :many
+SELECT
+    weekday
+FROM
+    ride_schedule_weekdays
+WHERE
+    ride_schedule_id = ?;
 
 
 -- name: RidesGetMany :many
 SELECT
-    rides.id,
-    location_from,
-    location_to,
-    tacking_place_at,
-    created_by,
-    created_at,
-    transport_limit,
-    driver,
+    r.id AS ride_id,
+    re.id AS ride_event_id,
+    re.location_from,
+    re.location_to,
+    re.tacking_place_at,
+    r.created_by,
+    re.transport_limit,
+    re.driver,
+    re.status,
     ud.email AS driver_email,
     uc.email AS created_by_email
 FROM
-    rides
-    INNER JOIN users ud ON rides.driver = ud.id
-    INNER JOIN users uc ON rides.created_by = uc.id
+    ride_events re
+    INNER JOIN rides r ON re.ride_id = r.id
+    INNER JOIN users ud ON r.driver = ud.id
+    INNER JOIN users uc ON r.created_by = uc.id
 ORDER BY
-    created_at DESC
+    (
+        SELECT
+            ordering
+        FROM
+            ride_event_status_ordering
+        WHERE
+            status = re.status
+    ),
+    tacking_place_at DESC
 LIMIT
     50
 OFFSET
     ?;
-
-
--- name: RidesGetById :one
-SELECT
-    rides.id,
-    location_from,
-    location_to,
-    tacking_place_at,
-    created_by,
-    created_at,
-    transport_limit,
-    driver,
-    ud.email AS driver_email,
-    uc.email AS created_by_email
-FROM
-    rides
-    INNER JOIN users ud ON rides.driver = ud.id
-    INNER JOIN users uc ON rides.created_by = uc.id
-WHERE
-    rides.id = ?;
