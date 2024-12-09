@@ -3,7 +3,7 @@ import { LoadingSpinner } from "../lib/components/Spinner";
 import { useUserStore } from "../lib/stores";
 import { useQuery } from "@tanstack/react-query";
 import { QUERY_KEYS } from "../lib/utils";
-import { Ride } from "../lib/models/ride";
+import { RideEvent } from "../lib/models/ride";
 import { AuthTokens } from "../lib/models/user";
 
 export const Route = createFileRoute("/rides/$rideId")({
@@ -58,7 +58,7 @@ function RideData({ tokens, rideId }: { tokens: AuthTokens; rideId: string }) {
       const ride = await res.json();
       return {
         type: "found",
-        data: ride as Ride,
+        data: ride as RideEvent,
       };
     },
   });
@@ -87,7 +87,6 @@ function RideData({ tokens, rideId }: { tokens: AuthTokens; rideId: string }) {
       <span>From: {r.locationFrom}</span>
       <span>When: {new Date(r.tackingPlaceAt).toLocaleString()}</span>
       <span>Created By: {r.createdByEmail}</span>
-      <span>Created At: {new Date(r.createdAt).toLocaleString()}</span>
     </div>
   );
 }

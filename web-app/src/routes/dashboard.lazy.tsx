@@ -3,7 +3,7 @@ import { useUserStore } from "../lib/stores";
 import { LoadingSpinner } from "../lib/components/Spinner";
 import { CreateRideForm } from "../lib/components/CreateRideForm";
 import { useQuery } from "@tanstack/react-query";
-import { Ride } from "../lib/models/ride";
+import { RideEvent } from "../lib/models/ride";
 import { AuthTokens } from "../lib/models/user";
 import { ReactNode, useRef } from "react";
 import { STYLES, QUERY_KEYS } from "../lib/utils";
@@ -51,19 +51,28 @@ function RideList({ tokens }: { tokens: AuthTokens }) {
   const navigate = useNavigate();
 
   const columns: {
-    key: keyof Ride;
-    label: string;
-    map?: (field: any) => string;
-  }[] = [
-    { key: "driverEmail", label: "Driver" },
-    { key: "locationTo", label: "To" },
-    { key: "locationFrom", label: "From" },
-    {
-      key: "tackingPlaceAt",
-      label: "When",
-      map: (at) => new Date(at).toLocaleString(),
+    [K in keyof RideEvent]?: {
+      label: string;
+      mapField: (field: RideEvent[K]) => string | ReactNode;
+    };
+  } = {
+    driverEmail: {
+      label: "Driver",
+      mapField: (email) => email,
     },
-  ];
+    locationTo: {
+      label: "To",
+      mapField: (to) => to,
+    },
+    locationFrom: {
+      label: "From",
+      mapField: (from) => from,
+    },
+    tackingPlaceAt: {
+      label: "When",
+      mapField: (at) => new Date(at).toLocaleString(),
+    },
+  };
 
   const {
     isPending,
@@ -81,7 +90,7 @@ function RideList({ tokens }: { tokens: AuthTokens }) {
       });
 
       const rides = await res.json();
-      return rides as Ride[];
+      return rides as RideEvent[];
     },
   });
 
@@ -103,7 +112,7 @@ function RideList({ tokens }: { tokens: AuthTokens }) {
       <thead className="uppercase">
         <RideListRow
           isHeading={true}
-          values={columns.map(({ label }) => {
+          values={Object.values(columns).map(({ label }) => {
             return label;
           })}
         />
@@ -114,16 +123,13 @@ function RideList({ tokens }: { tokens: AuthTokens }) {
             <RideListRow
               key={idx}
               isLast={idx === rides.length - 1}
-              values={columns.map(({ key, map }) => {
-                if (map) {
-                  return map(ride[key]);
-                }
-                return ride[key];
+              values={Object.entries(columns).map(([key, { mapField }]) => {
+                return (mapField as any)(ride[key as keyof RideEvent]);
               })}
               onClick={() => {
                 navigate({
                   to: "/rides/$rideId",
-                  params: { rideId: ride.id.toString() },
+                  params: { rideId: ride.rideEventId },
                 });
               }}
             />

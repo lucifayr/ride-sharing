@@ -43,13 +43,13 @@ VALUES
     (?, ?);
 
 
--- name: RidesMarkPastEventsDone :exec
+-- name: RidesMarkPastEventsDone :many
 UPDATE ride_events
 SET
     status = 'done'
 WHERE
     status = 'upcoming'
-    AND tacking_place_at <= ?;
+    AND tacking_place_at <= ? RETURNING id;
 
 
 -- name: RidesGetLatest :one
@@ -80,6 +80,7 @@ FROM
     INNER JOIN users uc ON r.created_by = uc.id
 WHERE
     re.ride_id = ?
+    AND re.status = 'upcoming'
     AND re.tacking_place_at = (
         SELECT
             MAX(tacking_place_at)
@@ -88,6 +89,32 @@ WHERE
         WHERE
             id = re.id
     );
+
+
+-- name: RidesGetEvent :one
+SELECT
+    r.id AS ride_id,
+    re.id AS ride_event_id,
+    re.location_from,
+    re.location_to,
+    re.tacking_place_at,
+    r.created_by,
+    re.transport_limit,
+    re.driver,
+    re.status,
+    ud.email AS driver_email,
+    uc.email AS created_by_email,
+    rs.id AS ride_schedule_id,
+    rs.unit AS ride_schedule_unit,
+    rs.schedule_interval AS ride_schedule_interval
+FROM
+    ride_events re
+    INNER JOIN rides r ON re.ride_id = r.id
+    LEFT OUTER JOIN ride_schedules rs ON rs.ride_id = r.id
+    INNER JOIN users ud ON r.driver = ud.id
+    INNER JOIN users uc ON r.created_by = uc.id
+WHERE
+    re.id = ?;
 
 
 -- name: RidesGetSchedule :one

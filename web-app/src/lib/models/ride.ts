@@ -1,12 +1,19 @@
-export type Ride = {
-  id: number;
+export type RideEvent = {
+  rideId: string;
+  rideEventId: string;
   locationFrom: string;
   locationTo: string;
   tackingPlaceAt: string;
   createdBy: string;
   createdByEmail: string;
-  driver: string;
+  driverId: string;
   driverEmail: string;
   transportLimit: number;
-  createdAt: string;
+  schedule?: RideSchedule;
+};
+
+export type RideSchedule = {
+  unit: string;
+  interval: number;
+  weekdays?: string[];
 };

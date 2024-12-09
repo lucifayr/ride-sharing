@@ -121,6 +121,71 @@ func (q *Queries) RidesCreateScheduleWeekday(ctx context.Context, arg RidesCreat
 	return err
 }
 
+const ridesGetEvent = `-- name: RidesGetEvent :one
+SELECT
+    r.id AS ride_id,
+    re.id AS ride_event_id,
+    re.location_from,
+    re.location_to,
+    re.tacking_place_at,
+    r.created_by,
+    re.transport_limit,
+    re.driver,
+    re.status,
+    ud.email AS driver_email,
+    uc.email AS created_by_email,
+    rs.id AS ride_schedule_id,
+    rs.unit AS ride_schedule_unit,
+    rs.schedule_interval AS ride_schedule_interval
+FROM
+    ride_events re
+    INNER JOIN rides r ON re.ride_id = r.id
+    LEFT OUTER JOIN ride_schedules rs ON rs.ride_id = r.id
+    INNER JOIN users ud ON r.driver = ud.id
+    INNER JOIN users uc ON r.created_by = uc.id
+WHERE
+    re.id = ?
+`
+
+type RidesGetEventRow struct {
+	RideID               string         `json:"rideId"`
+	RideEventID          string         `json:"rideEventId"`
+	LocationFrom         string         `json:"locationFrom"`
+	LocationTo           string         `json:"locationTo"`
+	TackingPlaceAt       string         `json:"tackingPlaceAt"`
+	CreatedBy            string         `json:"createdBy"`
+	TransportLimit       int64          `json:"transportLimit"`
+	Driver               string         `json:"driver"`
+	Status               string         `json:"status"`
+	DriverEmail          string         `json:"driverEmail"`
+	CreatedByEmail       string         `json:"createdByEmail"`
+	RideScheduleID       sql.NullString `json:"rideScheduleId"`
+	RideScheduleUnit     sql.NullString `json:"rideScheduleUnit"`
+	RideScheduleInterval sql.NullInt64  `json:"rideScheduleInterval"`
+}
+
+func (q *Queries) RidesGetEvent(ctx context.Context, id string) (RidesGetEventRow, error) {
+	row := q.db.QueryRowContext(ctx, ridesGetEvent, id)
+	var i RidesGetEventRow
+	err := row.Scan(
+		&i.RideID,
+		&i.RideEventID,
+		&i.LocationFrom,
+		&i.LocationTo,
+		&i.TackingPlaceAt,
+		&i.CreatedBy,
+		&i.TransportLimit,
+		&i.Driver,
+		&i.Status,
+		&i.DriverEmail,
+		&i.CreatedByEmail,
+		&i.RideScheduleID,
+		&i.RideScheduleUnit,
+		&i.RideScheduleInterval,
+	)
+	return i, err
+}
+
 const ridesGetLatest = `-- name: RidesGetLatest :one
 SELECT
     r.id AS ride_id,
@@ -149,6 +214,7 @@ FROM
     INNER JOIN users uc ON r.created_by = uc.id
 WHERE
     re.ride_id = ?
+    AND re.status = 'upcoming'
     AND re.tacking_place_at = (
         SELECT
             MAX(tacking_place_at)
@@ -355,16 +421,34 @@ func (q *Queries) RidesGetScheduleWeekdays(ctx context.Context, rideScheduleID s
 	return items, nil
 }
 
-const ridesMarkPastEventsDone = `-- name: RidesMarkPastEventsDone :exec
+const ridesMarkPastEventsDone = `-- name: RidesMarkPastEventsDone :many
 UPDATE ride_events
 SET
     status = 'done'
 WHERE
     status = 'upcoming'
-    AND tacking_place_at <= ?
+    AND tacking_place_at <= ? RETURNING id
 `
 
-func (q *Queries) RidesMarkPastEventsDone(ctx context.Context, tackingPlaceAt string) error {
-	_, err := q.db.ExecContext(ctx, ridesMarkPastEventsDone, tackingPlaceAt)
-	return err
+func (q *Queries) RidesMarkPastEventsDone(ctx context.Context, tackingPlaceAt string) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, ridesMarkPastEventsDone, tackingPlaceAt)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
