@@ -27,14 +27,6 @@ func rideHandlers(h *http.ServeMux) {
 	h.HandleFunc("GET /rides/by-id/{id}", handle(getNextRideById).with(bearerAuth(false)).build())
 }
 
-type createRideParams struct {
-	LocationFrom   *string    `json:"locationFrom" validate:"required"`
-	LocationTo     *string    `json:"locationTo" validate:"required"`
-	TackingPlaceAt *time.Time `json:"tackingPlaceAt" validate:"required"`
-	Driver         *string    `json:"driver" validate:"required"`
-	TransportLimit *int64     `json:"transportLimit" validate:"required"`
-}
-
 type RideEventData struct {
 	RideId         string        `json:"rideId"`
 	RideEventId    string        `json:"rideEventId"`
@@ -50,9 +42,18 @@ type RideEventData struct {
 	Schedule       *rideSchedule `json:"schedule"`
 }
 
+type createRideParams struct {
+	LocationFrom   *string       `json:"locationFrom" validate:"required"`
+	LocationTo     *string       `json:"locationTo" validate:"required"`
+	TackingPlaceAt *time.Time    `json:"tackingPlaceAt" validate:"required"`
+	Driver         *string       `json:"driver" validate:"required"`
+	TransportLimit *int64        `json:"transportLimit" validate:"required"`
+	Schedule       *rideSchedule `json:"schedule"`
+}
+
 type rideSchedule struct {
-	Unit     string    `json:"unit"`
-	Interval int64     `json:"interval"`
+	Unit     *string   `json:"unit" validate:"required"`
+	Interval *int64    `json:"interval" validate:"required"`
 	Weekdays *[]string `json:"weekdays"`
 }
 
@@ -66,39 +67,81 @@ func createRide(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var params createRideParams
-	err = json.Unmarshal(data, &params)
+	var createParams createRideParams
+	err = json.Unmarshal(data, &createParams)
 	if err != nil {
 		log.Println("Error: Invalid JSON in request body.", "error:", err)
 		httpWriteErr(w, http.StatusBadRequest, "Invalid JSON in request body.", err.Error())
 		return
 	}
 
-	err = utils.Validate.Struct(params)
+	err = utils.Validate.Struct(createParams)
 	if err != nil {
 		log.Println("Error: Invalid JSON in request body.", "error:", err)
 		httpWriteErr(w, http.StatusBadRequest, "Missing/Invalid fields in request body.", err.Error())
 		return
 	}
 
-	tackingPlaceAt := params.TackingPlaceAt.UTC().Format(time.RFC3339)
+	tx, err := state.getDBTx(r.Context())
+	assert.Nil(err)
+
+	queriesTx := state.queries.WithTx(tx)
+
+	tackingPlaceAt := createParams.TackingPlaceAt.UTC().Format(time.RFC3339)
 	argsCreateBase := sqlc.RidesCreateParams{
-		LocationFrom:   *params.LocationFrom,
-		LocationTo:     *params.LocationTo,
+		LocationFrom:   *createParams.LocationFrom,
+		LocationTo:     *createParams.LocationTo,
 		TackingPlaceAt: tackingPlaceAt,
-		Driver:         *params.Driver,
+		Driver:         *createParams.Driver,
 		CreatedBy:      user.ID,
-		TransportLimit: *params.TransportLimit,
+		TransportLimit: *createParams.TransportLimit,
 	}
 
-	rideId, err := state.queries.RidesCreate(r.Context(), argsCreateBase)
+	rideId, err := queriesTx.RidesCreate(r.Context(), argsCreateBase)
 	if err != nil {
 		log.Println("Error: Failed to create ride.", "error:", err, "args:", argsCreateBase)
 		httpWriteErr(w, http.StatusInternalServerError, "Failed to create ride. This might be due to invalid data or because of an internal server error.")
 		return
 	}
 
-	rideLatest, err := state.queries.RidesGetLatest(r.Context(), rideId)
+	if createParams.Schedule != nil {
+		argsCreateSchedule := sqlc.RidesCreateScheduleParams{
+			RideID:           rideId,
+			ScheduleInterval: *createParams.Schedule.Interval,
+			Unit:             *createParams.Schedule.Unit,
+		}
+
+		scheduleId, err := queriesTx.RidesCreateSchedule(r.Context(), argsCreateSchedule)
+		assert.Nil(err)
+
+		if *createParams.Schedule.Unit == "weekdays" {
+			if createParams.Schedule.Weekdays == nil || len(*createParams.Schedule.Weekdays) == 0 {
+				httpWriteErr(w, http.StatusBadRequest, "Invalid schedule. Field 'unit' is 'weekdays' but the field 'weekdays' is empty or undefined.")
+				return
+			}
+
+			for _, day := range *createParams.Schedule.Weekdays {
+				_, err = weekdayToInt(day)
+				if err != nil {
+					httpWriteErr(w, http.StatusBadRequest, "Invalid schedule weekday. Only lowercase standard english weekday names are allowed.")
+					return
+				}
+
+				argsCreateScheduleWeekday := sqlc.RidesCreateScheduleWeekdayParams{
+					RideScheduleID: scheduleId,
+					Weekday:        day,
+				}
+
+				err := queriesTx.RidesCreateScheduleWeekday(r.Context(), argsCreateScheduleWeekday)
+				assert.Nil(err)
+			}
+		}
+	}
+
+	rideLatest, err := queriesTx.RidesGetLatest(r.Context(), rideId)
+	assert.Nil(err)
+
+	err = tx.Commit()
 	assert.Nil(err)
 
 	resp, err := json.Marshal(rideLatest)
@@ -273,8 +316,8 @@ func buildRideEventData(ride rideRow, weekdays *[]string) (*RideEventData, error
 	var schedule *rideSchedule = nil
 	if ride.RideScheduleID.Valid {
 		schedule = &rideSchedule{
-			Unit:     ride.RideScheduleUnit.String,
-			Interval: ride.RideScheduleInterval.Int64,
+			Unit:     &ride.RideScheduleUnit.String,
+			Interval: &ride.RideScheduleInterval.Int64,
 			Weekdays: weekdays,
 		}
 	}
