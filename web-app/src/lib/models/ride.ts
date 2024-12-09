@@ -9,11 +9,12 @@ export type RideEvent = {
   driverId: string;
   driverEmail: string;
   transportLimit: number;
-  schedule?: RideSchedule;
+  status: string;
+  schedule: RideSchedule | null;
 };
 
 export type RideSchedule = {
   unit: string;
   interval: number;
-  weekdays?: string[];
+  weekdays: string[] | null;
 };

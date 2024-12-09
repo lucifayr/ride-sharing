@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { RideEvent } from "../lib/models/ride";
 import { AuthTokens } from "../lib/models/user";
 import { ReactNode, useRef } from "react";
-import { STYLES, QUERY_KEYS } from "../lib/utils";
+import { STYLES, QUERY_KEYS, isRestErr, toastRestErr } from "../lib/utils";
 
 export const Route = createLazyFileRoute("/dashboard")({
   component: DashBoard,
@@ -49,6 +49,7 @@ function DashBoard() {
 
 function RideList({ tokens }: { tokens: AuthTokens }) {
   const navigate = useNavigate();
+  const { setUser } = useUserStore();
 
   const columns: {
     [K in keyof RideEvent]?: {
@@ -72,6 +73,40 @@ function RideList({ tokens }: { tokens: AuthTokens }) {
       label: "When",
       mapField: (at) => new Date(at).toLocaleString(),
     },
+    status: {
+      label: "status",
+      mapField: (status) => status,
+    },
+    schedule: {
+      label: "Recurring",
+      mapField: (schedule) => {
+        if (schedule === null) {
+          return "---";
+        }
+
+        if (schedule.unit === "weekdays") {
+          if (schedule.weekdays === null) {
+            return "---";
+          }
+
+          if (schedule.interval === 1) {
+            // e.g. monday, friday
+            return schedule.weekdays.join(", ");
+          }
+
+          // e.g. 4. monday, tuesday
+          return `${schedule.interval}. ${schedule.weekdays.join(", ")}`;
+        }
+
+        if (schedule.interval === 1) {
+          // e.g. day
+          return schedule.unit.replace(/s$/, "");
+        }
+
+        // e.g. 3 weeks
+        return `${schedule.interval} ${schedule.unit}`;
+      },
+    },
   };
 
   const {
@@ -89,8 +124,17 @@ function RideList({ tokens }: { tokens: AuthTokens }) {
         },
       });
 
-      const rides = await res.json();
-      return rides as RideEvent[];
+      if (res.status === 401) {
+        setUser({ type: "logged-out" });
+      }
+
+      const data = await res.json();
+      if (isRestErr(data)) {
+        toastRestErr(data);
+        throw new Error("Failed to load rides.");
+      }
+
+      return data as RideEvent[];
     },
   });
 
@@ -99,7 +143,6 @@ function RideList({ tokens }: { tokens: AuthTokens }) {
   }
 
   if (error) {
-    console.error(error);
     return <span className="text-red-500">Failed to load rides</span>;
   }
 

@@ -7,6 +7,9 @@ import { RouterProvider, createRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
+// react-toastify style overrides to work with tailwind
+import "react-toastify/dist/ReactToastify.css";
+
 // Create a new router instance
 const router = createRouter({ routeTree });
 

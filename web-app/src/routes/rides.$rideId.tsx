@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { LoadingSpinner } from "../lib/components/Spinner";
 import { useUserStore } from "../lib/stores";
 import { useQuery } from "@tanstack/react-query";
-import { QUERY_KEYS } from "../lib/utils";
+import { isRestErr, QUERY_KEYS, toastRestErr } from "../lib/utils";
 import { RideEvent } from "../lib/models/ride";
 import { AuthTokens } from "../lib/models/user";
 
@@ -31,6 +31,8 @@ function RouteComponent() {
 }
 
 function RideData({ tokens, rideId }: { tokens: AuthTokens; rideId: string }) {
+  const { setUser } = useUserStore();
+
   const {
     isPending,
     error,
@@ -49,16 +51,25 @@ function RideData({ tokens, rideId }: { tokens: AuthTokens; rideId: string }) {
         },
       );
 
+      if (res.status === 401) {
+        setUser({ type: "logged-out" });
+      }
+
       if (res.status === 404) {
         return {
           type: "not-found",
         };
       }
 
-      const ride = await res.json();
+      const data = await res.json();
+      if (isRestErr(data)) {
+        toastRestErr(data);
+        throw new Error("Failed to load ride event.");
+      }
+
       return {
         type: "found",
-        data: ride as RideEvent,
+        data: data as RideEvent,
       };
     },
   });

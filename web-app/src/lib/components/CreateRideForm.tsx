@@ -3,12 +3,13 @@ import { LoadingSpinner } from "./Spinner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useUserStore } from "../stores";
 import { useNavigate } from "@tanstack/react-router";
-import { QUERY_KEYS, STYLES } from "../utils";
+import { isRestErr, QUERY_KEYS, STYLES, toastRestErr } from "../utils";
+import { RideSchedule } from "../models/ride";
 
 export function CreateRideForm({ afterSubmit }: { afterSubmit?: () => void }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { user } = useUserStore();
+  const { user, setUser } = useUserStore();
 
   if (user.type !== "logged-in") {
     navigate({ to: "/" });
@@ -20,25 +21,38 @@ export function CreateRideForm({ afterSubmit }: { afterSubmit?: () => void }) {
     locationTo: "",
     tackingPlaceAt: "",
     transportLimit: "4",
+    recurs: "",
   };
 
   const createRide = useMutation({
     mutationKey: ["create-ride-from-submmit"],
     mutationFn: async (params: typeof defaultValues) => {
-      // TODO: check status
-      await fetch(`${import.meta.env.VITE_API_URI}/rides`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URI}/rides`, {
         method: "POST",
         body: JSON.stringify({
           ...params,
           tackingPlaceAt: new Date(params.tackingPlaceAt).toISOString(),
           transportLimit: parseInt(params.transportLimit),
           driver: user.id,
+          schedule: parseRecuring(params.recurs),
         }),
         headers: {
           Authorization: user.tokens.accessToken,
           Accept: "application/json",
         },
       });
+
+      if (res.status === 401) {
+        setUser({ type: "logged-out" });
+        return;
+      }
+
+      if (res.status !== 201) {
+        const data = await res.json();
+        if (isRestErr(data)) {
+          toastRestErr(data);
+        }
+      }
 
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.rideItems] });
     },
@@ -169,6 +183,50 @@ export function CreateRideForm({ afterSubmit }: { afterSubmit?: () => void }) {
             }}
           />
 
+          <form.Field
+            name="recurs"
+            validators={{
+              onChange: ({ value }) => {
+                if (value.length === 0) {
+                  return undefined;
+                }
+
+                if (parseRecuring(value) === undefined) {
+                  return "Invalid interval";
+                }
+              },
+            }}
+            children={(field) => {
+              return (
+                <div className="flex flex-col">
+                  <label
+                    className="font-bold"
+                    htmlFor={field.name}
+                  >
+                    Recurs?
+                  </label>
+                  <input
+                    className="w-full appearance-none rounded border-2 border-gray-200 bg-gray-200 px-4 py-2 leading-tight text-gray-700 focus:border-purple-500 focus:bg-white focus:outline-none"
+                    placeholder="2 days"
+                    required={false}
+                    id={field.name}
+                    name={field.name}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                  />
+                  {field.state.meta.errors.length ? (
+                    <em className="text-red-500">
+                      {field.state.meta.errors.join(",")}
+                    </em>
+                  ) : (
+                    <>&nbsp;</>
+                  )}
+                </div>
+              );
+            }}
+          />
+
           <form.Subscribe
             selector={(state) => [state.canSubmit, state.isSubmitting]}
             children={([canSubmit, isSubmitting]) => (
@@ -189,4 +247,69 @@ export function CreateRideForm({ afterSubmit }: { afterSubmit?: () => void }) {
       </div>
     </div>
   );
+}
+
+const validBasicUnits = ["day", "week", "month", "year"];
+const validWeekdays = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+];
+
+function parseRecuring(text: string): RideSchedule | undefined {
+  const parts = text.trim().toLowerCase().split(" ", 2);
+  let partUnit: string;
+  let interval = 1;
+
+  if (parts.length === 0) {
+    return undefined;
+  }
+
+  if (parts.length === 1) {
+    partUnit = parts[0];
+  } else {
+    partUnit = parts[1];
+
+    interval = parseInt(parts[0]);
+    const intervalInt = Math.floor(interval);
+    if (
+      isNaN(interval) ||
+      interval <= 0 ||
+      intervalInt.toString() != parts[0]
+    ) {
+      return undefined;
+    }
+  }
+
+  const unit = validBasicUnits.find(
+    (u) => u === partUnit || u + "s" === partUnit,
+  );
+  if (unit) {
+    return {
+      unit: unit + "s",
+      interval,
+      weekdays: null,
+    };
+  }
+
+  const weekdays: string[] = [];
+  const days = partUnit.split(",");
+  for (const day of days) {
+    const d = day.trim();
+    const duplicate = weekdays.includes(d);
+    if (!validWeekdays.includes(d) || duplicate) {
+      return undefined;
+    }
+    weekdays.push(d);
+  }
+
+  return {
+    unit: "weekdays",
+    interval,
+    weekdays,
+  };
 }
