@@ -1,4 +1,4 @@
-import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
+import { createLazyFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useUserStore } from "../lib/stores";
 import { LoadingSpinner } from "../lib/components/Spinner";
 import { CreateRideForm } from "../lib/components/CreateRideForm";
@@ -7,6 +7,8 @@ import { RideEvent } from "../lib/models/ride";
 import { AuthTokens } from "../lib/models/user";
 import { ReactNode, useRef } from "react";
 import { STYLES, QUERY_KEYS, isRestErr, toastRestErr } from "../lib/utils";
+import openLinkIcon from "../assets/open-link.svg";
+import editIcon from "../assets/edit.svg";
 
 export const Route = createLazyFileRoute("/dashboard")({
   component: DashBoard,
@@ -48,7 +50,6 @@ function DashBoard() {
 }
 
 function RideList({ tokens }: { tokens: AuthTokens }) {
-  const navigate = useNavigate();
   const { setUser } = useUserStore();
 
   const columns: {
@@ -57,28 +58,40 @@ function RideList({ tokens }: { tokens: AuthTokens }) {
       mapField: (field: RideEvent[K]) => string | ReactNode;
     };
   } = {
-    driverEmail: {
-      label: "Driver",
-      mapField: (email) => email,
-    },
     locationTo: {
       label: "To",
-      mapField: (to) => to,
+      mapField: (to) => (
+        <a
+          href={`https://www.google.com/maps/search/Austria+${encodeURIComponent(to.replace(" ", "+"))}`}
+        >
+          {to}
+        </a>
+      ),
     },
     locationFrom: {
       label: "From",
-      mapField: (from) => from,
+      mapField: (from) => (
+        <a
+          href={`https://www.google.com/maps/search/Austria+${encodeURIComponent(from.replace(" ", "+"))}`}
+        >
+          {from}
+        </a>
+      ),
     },
     tackingPlaceAt: {
       label: "When",
       mapField: (at) => new Date(at).toLocaleString(),
+    },
+    driverEmail: {
+      label: "Driver",
+      mapField: (email) => email,
     },
     status: {
       label: "status",
       mapField: (status) => status,
     },
     schedule: {
-      label: "Recurring",
+      label: "Recurs",
       mapField: (schedule) => {
         if (schedule === null) {
           return "---";
@@ -90,21 +103,21 @@ function RideList({ tokens }: { tokens: AuthTokens }) {
           }
 
           if (schedule.interval === 1) {
-            // e.g. monday, friday
-            return schedule.weekdays.join(", ");
+            // e.g. every monday, friday
+            return `every ${schedule.weekdays.join("/")}`;
           }
 
-          // e.g. 4. monday, tuesday
-          return `${schedule.interval}. ${schedule.weekdays.join(", ")}`;
+          // e.g. every 4. monday/tuesday
+          return `every ${schedule.interval}. ${schedule.weekdays.join("/")}`;
         }
 
         if (schedule.interval === 1) {
-          // e.g. day
-          return schedule.unit.replace(/s$/, "");
+          // e.g. every day
+          return `every ${schedule.unit.replace(/s$/, "")}`;
         }
 
-        // e.g. 3 weeks
-        return `${schedule.interval} ${schedule.unit}`;
+        // e.g. every 3 weeks
+        return `every ${schedule.interval} ${schedule.unit}`;
       },
     },
   };
@@ -169,12 +182,7 @@ function RideList({ tokens }: { tokens: AuthTokens }) {
               values={Object.entries(columns).map(([key, { mapField }]) => {
                 return (mapField as any)(ride[key as keyof RideEvent]);
               })}
-              onClick={() => {
-                navigate({
-                  to: "/rides/$rideId",
-                  params: { rideId: ride.rideEventId },
-                });
-              }}
+              event={ride}
             />
           );
         })}
@@ -188,17 +196,19 @@ function RideListRow({
   values,
   isHeading,
   isLast,
-  onClick,
+  event,
 }: {
   values: (string | ReactNode)[];
   isHeading?: boolean;
   isLast?: boolean;
-  onClick?: () => void;
+  event?: RideEvent;
 }) {
+  const { user } = useUserStore();
+  const canEdit = user.type === "logged-in" && user.id === event?.createdBy;
+
   return (
     <tr
-      className={`border-neutral-300 dark:border-neutral-600 ${!isHeading ? "cursor-pointer" : ""} ${!isLast && !isHeading ? "border-b" : ""} ${isHeading ? "sticky top-0 bg-neutral-200 dark:bg-neutral-700" : "bg-neutral-100 dark:bg-neutral-800"}`}
-      onClick={onClick}
+      className={`border-neutral-300 dark:border-neutral-600 ${!isLast && !isHeading ? "border-b" : ""} ${isHeading ? "sticky top-0 bg-neutral-200 dark:bg-neutral-700" : "bg-neutral-100 dark:bg-neutral-800"}`}
     >
       {values.map((value, idx) => {
         if (isHeading) {
@@ -221,6 +231,20 @@ function RideListRow({
           </td>
         );
       })}
+      <td className="px-4 py-2">
+        {isHeading ? null : (
+          <Link
+            to="/rides/$rideId"
+            params={{ rideId: event!.rideEventId }}
+          >
+            <img
+              className="h-6 w-6 dark:invert"
+              src={canEdit ? editIcon : openLinkIcon}
+              alt={canEdit ? "edit" : "open"}
+            />
+          </Link>
+        )}
+      </td>
     </tr>
   );
 }
