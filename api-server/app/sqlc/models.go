@@ -41,10 +41,10 @@ type RideParticipant struct {
 }
 
 type RideSchedule struct {
-	ID       string `json:"id"`
-	RideID   string `json:"rideId"`
-	Interval int64  `json:"interval"`
-	Unit     string `json:"unit"`
+	ID               string `json:"id"`
+	RideID           string `json:"rideId"`
+	ScheduleInterval int64  `json:"scheduleInterval"`
+	Unit             string `json:"unit"`
 }
 
 type RideScheduleWeekday struct {

@@ -95,13 +95,15 @@ func TestHandleGetManyRides(t *testing.T) {
 	assert.Eq(resp.StatusCode, 200)
 	data, err := io.ReadAll(resp.Body)
 	assert.Nil(err)
-	var rides []sqlc.RidesGetManyRow
+	var rides []rest.RideEventData
 	err = json.Unmarshal(data, &rides)
 	assert.Nil(err)
 	assert.Eq(len(rides), 3)
+	assert.Eq(rides[0].RideId, "222")
 	assert.Eq(rides[0].LocationFrom, "Tokyo")
 	assert.Eq(rides[0].CreatedBy, "nmBSHcxyvn")
 	assert.Eq(rides[1].LocationFrom, "NYC")
+	assert.Eq(rides[1].RideId, "321")
 }
 
 func TestHandleGetManyRidesEmpty(t *testing.T) {
@@ -143,10 +145,10 @@ func TestHandleGetRideById(t *testing.T) {
 	assert.Eq(resp.StatusCode, 200)
 	data, err := io.ReadAll(resp.Body)
 	assert.Nil(err)
-	var ride sqlc.RidesGetByIdRow
+	var ride rest.RideEventData
 	err = json.Unmarshal(data, &ride)
-	assert.Eq(ride.ID, "123")
-	assert.Eq(ride.Driver, "m6SYNABgAw")
+	assert.Eq(ride.RideId, "123")
+	assert.Eq(ride.DriverId, "m6SYNABgAw")
 	assert.Eq(ride.DriverEmail, "KluwXy24KzJnN@proton.me")
 	assert.Eq(ride.LocationTo, "Wien")
 

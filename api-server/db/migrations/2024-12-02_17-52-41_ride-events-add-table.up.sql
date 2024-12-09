@@ -26,3 +26,29 @@ VALUES
     ('upcoming', 32),
     ('done', 64),
     ('canceled', 128);
+
+
+CREATE TRIGGER ride_event_create_first AFTER INSERT ON rides BEGIN
+INSERT INTO
+    ride_events (
+        ride_id,
+        location_from,
+        location_to,
+        driver,
+        status,
+        tacking_place_at,
+        transport_limit
+    )
+VALUES
+    (
+        NEW.id,
+        NEW.location_from,
+        new.location_to,
+        new.driver,
+        'upcoming',
+        new.tacking_place_at,
+        new.transport_limit
+    );
+
+
+END;

@@ -5,7 +5,6 @@ INSERT INTO
         location_from,
         location_to,
         tacking_place_at,
-        created_at,
         created_by,
         driver,
         transport_limit
@@ -15,8 +14,7 @@ VALUES
         '123',
         'Graz',
         "Wien",
-        '2024-11-26T15:18:26Z',
-        '2024-11-26T15:18:26Z',
+        '2044-11-26T15:18:26Z',
         'NnCaPHQLC9',
         'm6SYNABgAw',
         4
@@ -25,8 +23,7 @@ VALUES
         '222',
         "Tokyo",
         'Wien',
-        '2024-12-24T15:18:30Z',
-        '2024-12-24T15:18:30Z',
+        '2044-12-24T15:18:30Z',
         'nmBSHcxyvn',
         'm6SYNABgAw',
         2
@@ -35,8 +32,7 @@ VALUES
         '321',
         'NYC',
         "Tokyo",
-        '2024-11-28T15:18:30Z',
-        '2024-11-28T15:18:30Z',
+        '2044-11-28T15:18:30Z',
         'm6SYNABgAw',
         'NnCaPHQLC9',
         2

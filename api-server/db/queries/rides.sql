@@ -31,7 +31,7 @@ VALUES
 
 -- name: RidesCreateSchedule :one
 INSERT INTO
-    ride_schedules (ride_id, INTERVAL, unit)
+    ride_schedules (ride_id, schedule_interval, unit)
 VALUES
     (?, ?, ?) RETURNING id;
 
@@ -67,14 +67,14 @@ SELECT
     uc.email AS created_by_email,
     rs.id AS ride_schedule_id,
     rs.unit AS ride_schedule_unit,
-    rs.interval AS ride_schedule_interval,
+    rs.schedule_interval AS ride_schedule_interval,
     r.location_from AS base_location_from,
     r.location_to AS base_location_to,
     r.transport_limit AS base_transport_limit,
     r.driver AS base_driver
 FROM
     ride_events re
-    INNER JOIN rides r ON re.id = r.id
+    INNER JOIN rides r ON re.ride_id = r.id
     LEFT OUTER JOIN ride_schedules rs ON rs.ride_id = r.id
     INNER JOIN users ud ON r.driver = ud.id
     INNER JOIN users uc ON r.created_by = uc.id
@@ -94,7 +94,7 @@ WHERE
 SELECT
     id,
     ride_id,
-    INTERVAL,
+    schedule_interval,
     unit
 FROM
     ride_schedules
@@ -126,7 +126,7 @@ SELECT
     uc.email AS created_by_email,
     rs.id AS ride_schedule_id,
     rs.unit AS ride_schedule_unit,
-    rs.interval AS ride_schedule_interval
+    rs.schedule_interval AS ride_schedule_interval
 FROM
     ride_events re
     INNER JOIN rides r ON re.ride_id = r.id
@@ -142,7 +142,7 @@ ORDER BY
         WHERE
             status = re.status
     ),
-    tacking_place_at DESC
+    re.tacking_place_at DESC
 LIMIT
     50
 OFFSET

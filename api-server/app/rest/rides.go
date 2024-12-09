@@ -23,7 +23,7 @@ const (
 
 func rideHandlers(h *http.ServeMux) {
 	h.HandleFunc("POST /rides", handle(createRide).with(bearerAuth(false)).build())
-	h.HandleFunc("GET /rides/many", handle(getNextRideById).with(bearerAuth(false)).build())
+	h.HandleFunc("GET /rides/many", handle(getManyRides).with(bearerAuth(false)).build())
 	h.HandleFunc("GET /rides/by-id/{id}", handle(getNextRideById).with(bearerAuth(false)).build())
 }
 
@@ -35,7 +35,7 @@ type createRideParams struct {
 	TransportLimit *int64     `json:"transportLimit" validate:"required"`
 }
 
-type rideEventData struct {
+type RideEventData struct {
 	RideId         string        `json:"rideId"`
 	RideEventId    string        `json:"rideEventId"`
 	LocationFrom   string        `json:"locationFrom"`
@@ -91,33 +91,14 @@ func createRide(w http.ResponseWriter, r *http.Request) {
 		TransportLimit: *params.TransportLimit,
 	}
 
-	tx, err := state.getDBTx(r.Context())
-	assert.Nil(err)
-
-	queriesTx := state.queries.WithTx(tx)
-
-	rideId, err := queriesTx.RidesCreate(r.Context(), argsCreateBase)
+	rideId, err := state.queries.RidesCreate(r.Context(), argsCreateBase)
 	if err != nil {
 		log.Println("Error: Failed to create ride.", "error:", err, "args:", argsCreateBase)
 		httpWriteErr(w, http.StatusInternalServerError, "Failed to create ride. This might be due to invalid data or because of an internal server error.")
 		return
 	}
 
-	argsCreateEvent := sqlc.RidesCreateEventParams{
-		RideID:         rideId,
-		LocationFrom:   argsCreateBase.LocationFrom,
-		LocationTo:     argsCreateBase.LocationTo,
-		Driver:         argsCreateBase.Driver,
-		TackingPlaceAt: argsCreateBase.TackingPlaceAt,
-		TransportLimit: argsCreateBase.TransportLimit,
-	}
-	err = queriesTx.RidesCreateEvent(r.Context(), argsCreateEvent)
-	assert.Nil(err)
-
 	rideLatest, err := state.queries.RidesGetLatest(r.Context(), rideId)
-	assert.Nil(err)
-
-	err = tx.Commit()
 	assert.Nil(err)
 
 	resp, err := json.Marshal(rideLatest)
@@ -147,7 +128,7 @@ func getManyRides(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rides := make([]*rideEventData, len(rows))
+	rides := make([]*RideEventData, len(rows))
 	for idx, row := range rows {
 		var weekdays *[]string = nil
 		if row.RideScheduleID.Valid && row.RideScheduleUnit.String == "weekdays" {
@@ -212,7 +193,7 @@ func getNextRideById(w http.ResponseWriter, r *http.Request) {
 		weekdays = &days
 	}
 
-	var ride *rideEventData = nil
+	var ride *RideEventData = nil
 	if rideLatest.Status != RIDE_STATUS_UPCOMING {
 		next, err := nextScheduledTime(now, rideLatest.RideScheduleUnit.String, rideLatest.RideScheduleInterval.Int64, weekdays)
 		assert.Nil(err)
@@ -283,7 +264,7 @@ func toRideRow(row sqlc.RidesGetLatestRow) rideRow {
 	}
 }
 
-func buildRideEventData(ride rideRow, weekdays *[]string) (*rideEventData, error) {
+func buildRideEventData(ride rideRow, weekdays *[]string) (*RideEventData, error) {
 	tackingPlaceAt, err := time.Parse(time.RFC3339, ride.TackingPlaceAt)
 	if err != nil {
 		return nil, err
@@ -298,7 +279,7 @@ func buildRideEventData(ride rideRow, weekdays *[]string) (*rideEventData, error
 		}
 	}
 
-	rideEvent := rideEventData{
+	rideEvent := RideEventData{
 		RideId:         ride.RideID,
 		RideEventId:    ride.RideEventID,
 		LocationFrom:   ride.LocationFrom,

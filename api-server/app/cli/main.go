@@ -110,7 +110,12 @@ func createMigration(flags map[string]any) {
 			log.Fatalln("Migration already exists", "path", path)
 		}
 
-		err := os.WriteFile(path, []byte{}, 0644)
+		content := []byte{}
+		if strings.Contains(suffix, migrations.MigrationKindValidate) {
+			content = []byte("SELECT * FROM missing_validation_migration LIMIT 1;")
+		}
+
+		err := os.WriteFile(path, content, 0644)
 		if err != nil {
 			log.Fatalln("Failed to write migrations file.", "path", path, "error", err)
 		}

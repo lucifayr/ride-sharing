@@ -1,7 +1,7 @@
 CREATE TABLE ride_schedules (
     id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(8)))),
     ride_id TEXT NOT NULL,
-    interval INTEGER NOT NULL,
+    schedule_interval INTEGER NOT NULL,
     unit TEXT NOT NULL CHECK (
         unit IN ('days', 'weeks', 'months', 'years', 'weekdays')
     ),
