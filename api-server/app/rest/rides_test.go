@@ -20,8 +20,7 @@ import (
 
 func TestHandleCreateRide(t *testing.T) {
 	db := utils.InitTestDB(path.Join(utils.ProjectRoot(), "db/testing/setup/0001-handle-create-rides.sql"))
-	queries := sqlc.New(db)
-	handler := rest.NewRESTApi(queries)
+	handler := rest.NewRESTApi(db)
 
 	api := httptest.NewServer(handler)
 	defer api.Close()
@@ -81,8 +80,7 @@ func TestHandleCreateRide(t *testing.T) {
 
 func TestHandleGetManyRides(t *testing.T) {
 	db := utils.InitTestDB(path.Join(utils.ProjectRoot(), "db/testing/setup/0002-handle-get-many-rides-three-items.sql"))
-	queries := sqlc.New(db)
-	handler := rest.NewRESTApi(queries)
+	handler := rest.NewRESTApi(db)
 
 	api := httptest.NewServer(handler)
 	defer api.Close()
@@ -108,8 +106,7 @@ func TestHandleGetManyRides(t *testing.T) {
 
 func TestHandleGetManyRidesEmpty(t *testing.T) {
 	db := utils.InitTestDB(path.Join(utils.ProjectRoot(), "db/testing/setup/0003-handle-get-many-rides-empty.sql"))
-	queries := sqlc.New(db)
-	handler := rest.NewRESTApi(queries)
+	handler := rest.NewRESTApi(db)
 
 	api := httptest.NewServer(handler)
 	defer api.Close()
@@ -131,8 +128,7 @@ func TestHandleGetManyRidesEmpty(t *testing.T) {
 
 func TestHandleGetRideById(t *testing.T) {
 	db := utils.InitTestDB(path.Join(utils.ProjectRoot(), "db/testing/setup/0004-handle-get-ride-by-id.sql"))
-	queries := sqlc.New(db)
-	handler := rest.NewRESTApi(queries)
+	handler := rest.NewRESTApi(db)
 
 	api := httptest.NewServer(handler)
 	defer api.Close()

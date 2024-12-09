@@ -82,7 +82,7 @@ func createRide(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tackingPlaceAt := params.TackingPlaceAt.UTC().Format(time.RFC3339)
-	args := sqlc.RidesCreateParams{
+	argsCreateBase := sqlc.RidesCreateParams{
 		LocationFrom:   *params.LocationFrom,
 		LocationTo:     *params.LocationTo,
 		TackingPlaceAt: tackingPlaceAt,
@@ -91,20 +91,41 @@ func createRide(w http.ResponseWriter, r *http.Request) {
 		TransportLimit: *params.TransportLimit,
 	}
 
-	ride, err := state.queries.RidesCreate(r.Context(), args)
+	tx, err := state.getDBTx(r.Context())
+	assert.Nil(err)
+
+	queriesTx := state.queries.WithTx(tx)
+
+	rideId, err := queriesTx.RidesCreate(r.Context(), argsCreateBase)
 	if err != nil {
-		log.Println("Error: Failed to create ride.", "error:", err, "args:", args)
+		log.Println("Error: Failed to create ride.", "error:", err, "args:", argsCreateBase)
 		httpWriteErr(w, http.StatusInternalServerError, "Failed to create ride. This might be due to invalid data or because of an internal server error.")
 		return
 	}
 
-	resp, err := json.Marshal(ride)
+	argsCreateEvent := sqlc.RidesCreateEventParams{
+		RideID:         rideId,
+		LocationFrom:   argsCreateBase.LocationFrom,
+		LocationTo:     argsCreateBase.LocationTo,
+		Driver:         argsCreateBase.Driver,
+		TackingPlaceAt: argsCreateBase.TackingPlaceAt,
+		TransportLimit: argsCreateBase.TransportLimit,
+	}
+	err = queriesTx.RidesCreateEvent(r.Context(), argsCreateEvent)
+	assert.Nil(err)
+
+	rideLatest, err := state.queries.RidesGetLatest(r.Context(), rideId)
+	assert.Nil(err)
+
+	err = tx.Commit()
+	assert.Nil(err)
+
+	resp, err := json.Marshal(rideLatest)
 	assert.Nil(err, "Failed to serialize ride.")
 	w.WriteHeader(201)
 	w.Write(resp)
 }
 
-// TODO: update to handle new fields
 func getManyRides(w http.ResponseWriter, r *http.Request) {
 	var offset int64 = 0
 	offsetStr := r.FormValue("offset")
@@ -119,11 +140,26 @@ func getManyRides(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rides, err := state.queries.RidesGetMany(r.Context(), offset)
+	rows, err := state.queries.RidesGetMany(r.Context(), offset)
 	if err != nil {
 		log.Println("Error: Failed to get rides.", "error:", err)
 		httpWriteErr(w, http.StatusInternalServerError, "Failed to get rides.")
 		return
+	}
+
+	rides := make([]*rideEventData, len(rows))
+	for idx, row := range rows {
+		var weekdays *[]string = nil
+		if row.RideScheduleID.Valid && row.RideScheduleUnit.String == "weekdays" {
+			days, err := state.queries.RidesGetScheduleWeekdays(r.Context(), row.RideScheduleID.String)
+			assert.Nil(err)
+			weekdays = &days
+		}
+
+		event, err := buildRideEventData(rideRow(row), weekdays)
+		assert.Nil(err)
+
+		rides[idx] = event
 	}
 
 	var resp []byte
@@ -172,12 +208,14 @@ func getNextRideById(w http.ResponseWriter, r *http.Request) {
 	var weekdays *[]string = nil
 	if rideLatest.RideScheduleUnit.String == "weekdays" {
 		days, err := state.queries.RidesGetScheduleWeekdays(r.Context(), rideLatest.RideScheduleID.String)
+		assert.Nil(err)
 		weekdays = &days
 	}
 
 	var ride *rideEventData = nil
 	if rideLatest.Status != RIDE_STATUS_UPCOMING {
-		next, err := nextScheduledTime(now, rideLatest.RideScheduleID.String, rideLatest.RideScheduleUnit.String, rideLatest.RideScheduleInterval.Int64, weekdays)
+		next, err := nextScheduledTime(now, rideLatest.RideScheduleUnit.String, rideLatest.RideScheduleInterval.Int64, weekdays)
+		assert.Nil(err)
 
 		argsCreateEvent := sqlc.RidesCreateEventParams{
 			RideID:         rideLatest.RideID,
@@ -189,12 +227,17 @@ func getNextRideById(w http.ResponseWriter, r *http.Request) {
 		}
 
 		err = state.queries.RidesCreateEvent(r.Context(), argsCreateEvent)
+		assert.Nil(err)
 
 		rideNext, err := state.queries.RidesGetLatest(r.Context(), id)
-		ride, err = buildRideEventData(rideNext, weekdays)
+		assert.Nil(err)
+
+		ride, err = buildRideEventData(toRideRow(rideNext), weekdays)
+		assert.Nil(err)
 		return
 	} else {
-		ride, err = buildRideEventData(rideLatest, weekdays)
+		ride, err = buildRideEventData(toRideRow(rideLatest), weekdays)
+		assert.Nil(err)
 	}
 
 	var resp []byte
@@ -204,7 +247,43 @@ func getNextRideById(w http.ResponseWriter, r *http.Request) {
 	w.Write(resp)
 }
 
-func buildRideEventData(ride sqlc.RidesGetLatestRow, weekdays *[]string) (*rideEventData, error) {
+type rideRow struct {
+	RideID               string
+	RideEventID          string
+	LocationFrom         string
+	LocationTo           string
+	TackingPlaceAt       string
+	CreatedBy            string
+	TransportLimit       int64
+	Driver               string
+	Status               string
+	DriverEmail          string
+	CreatedByEmail       string
+	RideScheduleID       sql.NullString
+	RideScheduleUnit     sql.NullString
+	RideScheduleInterval sql.NullInt64
+}
+
+func toRideRow(row sqlc.RidesGetLatestRow) rideRow {
+	return rideRow{
+		RideID:               row.RideID,
+		RideEventID:          row.RideEventID,
+		LocationFrom:         row.LocationFrom,
+		LocationTo:           row.LocationTo,
+		TackingPlaceAt:       row.TackingPlaceAt,
+		CreatedBy:            row.CreatedBy,
+		TransportLimit:       row.TransportLimit,
+		Driver:               row.Driver,
+		Status:               row.Status,
+		DriverEmail:          row.DriverEmail,
+		CreatedByEmail:       row.CreatedByEmail,
+		RideScheduleID:       row.RideScheduleID,
+		RideScheduleUnit:     row.RideScheduleUnit,
+		RideScheduleInterval: row.RideScheduleInterval,
+	}
+}
+
+func buildRideEventData(ride rideRow, weekdays *[]string) (*rideEventData, error) {
 	tackingPlaceAt, err := time.Parse(time.RFC3339, ride.TackingPlaceAt)
 	if err != nil {
 		return nil, err
@@ -237,7 +316,7 @@ func buildRideEventData(ride sqlc.RidesGetLatestRow, weekdays *[]string) (*rideE
 	return &rideEvent, nil
 }
 
-func nextScheduledTime(current time.Time, scheduleId string, scheduleUnit string, scheduleInterval int64, weekdays *[]string) (time.Time, error) {
+func nextScheduledTime(current time.Time, scheduleUnit string, scheduleInterval int64, weekdays *[]string) (time.Time, error) {
 	switch scheduleUnit {
 	case "days":
 		{
@@ -257,11 +336,80 @@ func nextScheduledTime(current time.Time, scheduleId string, scheduleUnit string
 		}
 	case "weekdays":
 		{
-			return current, fmt.Errorf("TODO")
+			if weekdays == nil || len(*weekdays) == 0 {
+				return current, errors.New(fmt.Sprint("Invalid weekdays schedule, received weekdays ", weekdays))
+			}
+
+			weekdayInts := make([]int, len(*weekdays))
+			for idx, day := range *weekdays {
+				dayInt, err := weekdayToInt(day)
+				if err != nil {
+					return current, err
+				}
+
+				weekdayInts[idx] = dayInt
+			}
+
+			minDayDist := 8
+			nowDayInt := int(current.Weekday())
+			for _, dayInt := range weekdayInts {
+				var dist int
+
+				if nowDayInt < dayInt {
+					dist = dayInt - nowDayInt
+				} else {
+					dist = 7 - (nowDayInt - dayInt)
+				}
+
+				if dist < minDayDist {
+					minDayDist = dist
+				}
+			}
+
+			assert.True(minDayDist <= 7, "Invalid next weekday. Distance to now day", minDayDist)
+
+			return current.AddDate(0, 0, minDayDist), nil
 		}
 	default:
 		{
 			return current, fmt.Errorf("Invalid schedule unit '%s'", scheduleUnit)
+		}
+	}
+}
+
+func weekdayToInt(day string) (int, error) {
+	switch day {
+	case "sunday":
+		{
+			return 0, nil
+		}
+	case "monday":
+		{
+			return 1, nil
+		}
+	case "tuesday":
+		{
+			return 2, nil
+		}
+	case "wednesday":
+		{
+			return 3, nil
+		}
+	case "thursday":
+		{
+			return 4, nil
+		}
+	case "friday":
+		{
+			return 5, nil
+		}
+	case "saturday":
+		{
+			return 6, nil
+		}
+	default:
+		{
+			return -1, fmt.Errorf("Invalid weekday '%s'", day)
 		}
 	}
 }

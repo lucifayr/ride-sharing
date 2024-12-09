@@ -2,6 +2,7 @@ package rest
 
 import (
 	"context"
+	"database/sql"
 	"net/http"
 	sqlc "ride_sharing_api/app/sqlc"
 	"sync"
@@ -14,6 +15,7 @@ type apiState struct {
 	queries     *sqlc.Queries
 	mutex       sync.Mutex
 	oauthStates map[string]time.Time
+	getDBTx     func(ctx context.Context) (*sql.Tx, error)
 }
 
 const middlewareKey = "middleware"
@@ -29,8 +31,10 @@ type middlewareData struct {
 	value any
 }
 
-func NewRESTApi(queries *sqlc.Queries) http.Handler {
-	state = &apiState{oauthStates: make(map[string]time.Time), queries: queries}
+func NewRESTApi(db *sql.DB) http.Handler {
+	state = &apiState{oauthStates: make(map[string]time.Time), queries: sqlc.New(db), getDBTx: func(ctx context.Context) (*sql.Tx, error) {
+		return db.BeginTx(ctx, &sql.TxOptions{})
+	}}
 
 	mux := http.NewServeMux()
 

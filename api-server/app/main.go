@@ -8,7 +8,6 @@ import (
 
 	"ride_sharing_api/app/common"
 	"ride_sharing_api/app/rest"
-	sqlc "ride_sharing_api/app/sqlc"
 	"ride_sharing_api/app/utils"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -26,7 +25,7 @@ func main() {
 		log.Fatalln("Failed to initialize database.", dbFile, err)
 	}
 
-	handler := rest.NewRESTApi(sqlc.New(db))
+	handler := rest.NewRESTApi(db)
 	server := &http.Server{
 		Addr:    utils.GetEnvRequired(common.ENV_HOST_ADDR),
 		Handler: handler,

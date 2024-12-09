@@ -86,7 +86,7 @@ func (q *Queries) RidesCreateEvent(ctx context.Context, arg RidesCreateEventPara
 
 const ridesCreateSchedule = `-- name: RidesCreateSchedule :one
 INSERT INTO
-    ride_schedules (ride_id, interval, unit)
+    ride_schedules (ride_id, INTERVAL, unit)
 VALUES
     (?, ?, ?) RETURNING id
 `
@@ -127,20 +127,20 @@ SELECT
     re.id AS ride_event_id,
     re.location_from,
     re.location_to,
-    r.location_from AS base_location_from,
-    r.location_to AS base_location_to,
     re.tacking_place_at,
     r.created_by,
     re.transport_limit,
-    r.transport_limit AS base_transport_limit,
-    r.driver AS base_driver,
     re.driver,
     re.status,
     ud.email AS driver_email,
     uc.email AS created_by_email,
     rs.id AS ride_schedule_id,
     rs.unit AS ride_schedule_unit,
-    rs.interval AS ride_schedule_interval
+    rs.interval AS ride_schedule_interval,
+    r.location_from AS base_location_from,
+    r.location_to AS base_location_to,
+    r.transport_limit AS base_transport_limit,
+    r.driver AS base_driver
 FROM
     ride_events re
     INNER JOIN rides r ON re.id = r.id
@@ -164,13 +164,9 @@ type RidesGetLatestRow struct {
 	RideEventID          string         `json:"rideEventId"`
 	LocationFrom         string         `json:"locationFrom"`
 	LocationTo           string         `json:"locationTo"`
-	BaseLocationFrom     string         `json:"baseLocationFrom"`
-	BaseLocationTo       string         `json:"baseLocationTo"`
 	TackingPlaceAt       string         `json:"tackingPlaceAt"`
 	CreatedBy            string         `json:"createdBy"`
 	TransportLimit       int64          `json:"transportLimit"`
-	BaseTransportLimit   int64          `json:"baseTransportLimit"`
-	BaseDriver           string         `json:"baseDriver"`
 	Driver               string         `json:"driver"`
 	Status               string         `json:"status"`
 	DriverEmail          string         `json:"driverEmail"`
@@ -178,6 +174,10 @@ type RidesGetLatestRow struct {
 	RideScheduleID       sql.NullString `json:"rideScheduleId"`
 	RideScheduleUnit     sql.NullString `json:"rideScheduleUnit"`
 	RideScheduleInterval sql.NullInt64  `json:"rideScheduleInterval"`
+	BaseLocationFrom     string         `json:"baseLocationFrom"`
+	BaseLocationTo       string         `json:"baseLocationTo"`
+	BaseTransportLimit   int64          `json:"baseTransportLimit"`
+	BaseDriver           string         `json:"baseDriver"`
 }
 
 func (q *Queries) RidesGetLatest(ctx context.Context, rideID string) (RidesGetLatestRow, error) {
@@ -188,13 +188,9 @@ func (q *Queries) RidesGetLatest(ctx context.Context, rideID string) (RidesGetLa
 		&i.RideEventID,
 		&i.LocationFrom,
 		&i.LocationTo,
-		&i.BaseLocationFrom,
-		&i.BaseLocationTo,
 		&i.TackingPlaceAt,
 		&i.CreatedBy,
 		&i.TransportLimit,
-		&i.BaseTransportLimit,
-		&i.BaseDriver,
 		&i.Driver,
 		&i.Status,
 		&i.DriverEmail,
@@ -202,6 +198,10 @@ func (q *Queries) RidesGetLatest(ctx context.Context, rideID string) (RidesGetLa
 		&i.RideScheduleID,
 		&i.RideScheduleUnit,
 		&i.RideScheduleInterval,
+		&i.BaseLocationFrom,
+		&i.BaseLocationTo,
+		&i.BaseTransportLimit,
+		&i.BaseDriver,
 	)
 	return i, err
 }
@@ -303,7 +303,7 @@ const ridesGetSchedule = `-- name: RidesGetSchedule :one
 SELECT
     id,
     ride_id,
-    interval,
+    INTERVAL,
     unit
 FROM
     ride_schedules
