@@ -1,80 +1,26 @@
-import { useEffect, useRef } from "react";
-import { CreateRideForm } from "../lib/components/CreateRideForm";
-import {
-  createFileRoute,
-  Link,
-  ReactNode,
-  useNavigate,
-} from "@tanstack/react-router";
+import { useRef } from "react";
+import { CreateRideForm } from "../components/CreateRideForm";
+import { useUserStore } from "../stores";
+import { AuthTokens } from "../models/user";
+import { RideEvent, RideSchedule } from "../models/ride";
+import { Link, ReactNode, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { LoadingSpinner } from "../components/Spinner";
 import openLinkIcon from "../assets/open-link.svg";
 import editIcon from "../assets/edit.svg";
-import { STYLES, QUERY_KEYS, isRestErr, toastRestErr } from "../lib/utils";
-import { useUserStore } from "../lib/stores";
-import { LoadingSpinner } from "../lib/components/Spinner";
-import { AuthTokens } from "../lib/models/user";
-import { RideEvent, RideSchedule } from "../lib/models/ride";
-import ScheduledRideForm from "../lib/components/ScheduledRideForm";
-import { GroupBar } from "../lib/components/GroupBar";
-import { Group } from "../lib/models/models";
+import { STYLES, QUERY_KEYS, isRestErr, toastRestErr } from "../../lib/utils";
 
-export const Route = createFileRoute("/dashboard")({
-  component: Dashboard,
-});
-
-function Dashboard() {
+export default function RideDash() {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const { user, setUser } = useUserStore();
+  const { user } = useUserStore();
 
   const navigate = useNavigate();
   if (user.type !== "logged-in") {
     navigate({ to: "/" });
-    return <LoadingSpinner content={<span> Redirecting to login...</span>} />;
+    return <LoadingSpinner content={<span>Redirecting to login...</span>} />;
   }
-  const {
-    isPending,
-    error,
-    data: groups,
-  } = useQuery({
-    queryKey: [QUERY_KEYS.rideItems],
-    queryFn: async () => {
-      const res = await fetch(`${import.meta.env.VITE_API_URI}/groups/many`, {
-        method: "GET",
-        headers: {
-          Authorization: user.tokens.accessToken,
-          Accept: "application/json",
-        },
-      });
-
-      if (res.status === 401) {
-        setUser({ type: "logged-out" });
-      }
-
-      const data = await res.json();
-      if (isRestErr(data)) {
-        toastRestErr(data);
-        throw new Error("Failed to load rides.");
-      }
-
-      return data as Group[];
-    },
-  });
-
-  if (isPending) {
-    return <LoadingSpinner content={<span>Getting rides...</span>} />;
-  }
-
-  if (error) {
-    return <span className="text-red-500">Failed to load rides</span>;
-  }
-
-  if (groups.length === 0) {
-    return <span>No rides found</span>;
-  }
-
   return (
     <div className="flex gap-8">
-      <GroupBar groups={groups} />
       <div className="flex w-full flex-col gap-2">
         <div className="flex min-h-32 items-center justify-center">
           <button
@@ -97,10 +43,8 @@ function Dashboard() {
     </div>
   );
 }
-
 function RideList({ tokens }: { tokens: AuthTokens }) {
   const { setUser } = useUserStore();
-
   const columns: {
     [K in keyof RideEvent]?: {
       label: string;

@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 dialog::backdrop {
-        backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
 }
 
 .doto-h2 {

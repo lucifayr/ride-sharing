@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { Group } from "../models/models";
 
-export const GroupBar = () => {
+export const GroupBar = ({ groups }: { groups: Group[] }) => {
   const [barMode, setBarMode] = useState("Groups");
   return (
     <div className="flex h-full flex-col">
@@ -41,7 +42,7 @@ export const GroupBar = () => {
             {groups.map((group, i) => {
               return (
                 <GroupItem
-                  groupName={group.groupName}
+                  groupName={group.name}
                   barMode={barMode}
                   key={i}
                 />

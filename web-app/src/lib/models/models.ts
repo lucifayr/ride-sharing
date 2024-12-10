@@ -18,6 +18,12 @@ type Ride = {
   destination: string;
   departurePoint: string;
 };
+export type Group = {
+  groupId: string;
+  name: string;
+  description?: string;
+  createdB: string; // user id
+};
 
 export type Schedule = {
   monday: string;
