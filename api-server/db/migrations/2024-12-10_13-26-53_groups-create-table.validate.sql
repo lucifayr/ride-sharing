@@ -1,0 +1,9 @@
+SELECT
+    id,
+    name,
+    description,
+    createdBy
+FROM
+    ride_groups
+LIMIT
+    1;

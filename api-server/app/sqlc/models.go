@@ -35,6 +35,13 @@ type RideEventStatusOrdering struct {
 	Ordering int64  `json:"ordering"`
 }
 
+type RideGroup struct {
+	ID          string         `json:"id"`
+	Name        string         `json:"name"`
+	CreatedBy   string         `json:"createdBy"`
+	Description sql.NullString `json:"description"`
+}
+
 type RideParticipant struct {
 	UserID string `json:"userId"`
 	RideID int64  `json:"rideId"`

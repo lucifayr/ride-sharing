@@ -42,6 +42,7 @@ func NewRESTApi(db *sql.DB) http.Handler {
 	authHandlersGoogle(mux)
 	userHandlers(mux)
 	rideHandlers(mux)
+	groupHandlers(mux)
 
 	return WithCors(mux)
 }
