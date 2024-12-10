@@ -51,6 +51,7 @@ export function CreateRideForm({ afterSubmit }: { afterSubmit?: () => void }) {
         const data = await res.json();
         if (isRestErr(data)) {
           toastRestErr(data);
+          return;
         }
       }
 
@@ -261,7 +262,12 @@ const validWeekdays = [
 ];
 
 export function parseRecuring(text: string): RideSchedule | undefined {
-  const parts = text.trim().toLowerCase().split(" ", 2);
+  let t = text.trim().toLowerCase();
+  if (t.startsWith("every")) {
+    t = t.substring("every".length).trim();
+  }
+
+  const parts = t.split(" ", 2);
   let partUnit: string;
   let interval = 1;
 

@@ -84,6 +84,13 @@ func updateRide(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	err = utils.Validate.Struct(updateParams)
+	if err != nil {
+		log.Println("Error: Invalid JSON in request body.", "error:", err)
+		httpWriteErr(w, http.StatusBadRequest, "Missing/Invalid fields in request body.", err.Error())
+		return
+	}
+
 	tx, err := state.getDBTx(r.Context())
 	assert.Nil(err)
 
@@ -99,6 +106,8 @@ func updateRide(w http.ResponseWriter, r *http.Request) {
 		httpWriteErr(w, http.StatusNotFound, "No ride event exists for the event with 'id'.")
 		return
 	}
+
+	assert.Nil(err)
 
 	if event.CreatedBy != user.ID {
 		httpWriteErr(w, http.StatusBadRequest, "You are not the owner of this ride event.")

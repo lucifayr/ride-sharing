@@ -1,11 +1,14 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { LoadingSpinner } from "../lib/components/Spinner";
 import { useUserStore } from "../lib/stores";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isRestErr, QUERY_KEYS, toastRestErr } from "../lib/utils";
-import { RideEvent } from "../lib/models/ride";
-import { AuthTokens } from "../lib/models/user";
+import { RideEvent, RideSchedule } from "../lib/models/ride";
+import { UserLoggedIn } from "../lib/models/user";
 import { displaySchedule } from "./dashboard.lazy";
+import { toast } from "react-toastify";
+import { parseRecuring } from "../lib/components/CreateRideForm";
+import { useRef } from "react";
 
 export const Route = createFileRoute("/rides/$rideId")({
   component: RouteComponent,
@@ -25,14 +28,16 @@ function RouteComponent() {
     <div className="flex h-full items-center justify-center">
       <RideData
         rideId={rideId}
-        tokens={user.tokens}
+        user={user}
       />
     </div>
   );
 }
 
-function RideData({ tokens, rideId }: { tokens: AuthTokens; rideId: string }) {
+function RideData({ user, rideId }: { user: UserLoggedIn; rideId: string }) {
   const { setUser } = useUserStore();
+  const queryClient = useQueryClient();
+  const inputScheduleRef = useRef<HTMLInputElement>(null);
 
   const {
     isPending,
@@ -46,7 +51,7 @@ function RideData({ tokens, rideId }: { tokens: AuthTokens; rideId: string }) {
         {
           method: "GET",
           headers: {
-            Authorization: tokens.accessToken,
+            Authorization: user.tokens.accessToken,
             Accept: "application/json",
           },
         },
@@ -75,6 +80,47 @@ function RideData({ tokens, rideId }: { tokens: AuthTokens; rideId: string }) {
     },
   });
 
+  const updateSchedule = useMutation({
+    mutationKey: ["update-ride-schedule"],
+    onError: (err) => {
+      console.error(err);
+    },
+    mutationFn: async ({
+      schedule,
+      rideEventId,
+    }: {
+      schedule: RideSchedule;
+      rideEventId: string;
+    }) => {
+      const res = await fetch(`${import.meta.env.VITE_API_URI}/rides/update`, {
+        method: "POST",
+        headers: {
+          Authorization: user.tokens.accessToken,
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          schedule,
+          rideEventId,
+        }),
+      });
+
+      if (res.status === 401) {
+        setUser({ type: "logged-out" });
+      }
+
+      if (!res.ok) {
+        const data = await res.json();
+        if (isRestErr(data)) {
+          toastRestErr(data);
+          return;
+        }
+      }
+
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.rideSingle] });
+      toast("Update ride schedule", { type: "success" });
+    },
+  });
+
   if (isPending) {
     return <LoadingSpinner content={<span>Getting ride...</span>} />;
   }
@@ -89,13 +135,60 @@ function RideData({ tokens, rideId }: { tokens: AuthTokens; rideId: string }) {
   }
 
   const r = ride.data;
+  const canEdit = r.createdBy === user.id;
+
   return (
-    <div className="relative flex aspect-video min-w-[320px] flex-col gap-2 rounded bg-neutral-200 p-4 text-xl shadow-lg dark:bg-neutral-800 dark:shadow-none">
-      <span>To: {r.locationTo}</span>
-      <span>From: {r.locationFrom}</span>
-      <span>When: {new Date(r.tackingPlaceAt).toLocaleString()}</span>
-      <span>Driver: {r.driverEmail}</span>
-      <span>Recurs: {displaySchedule(r.schedule)}</span>
+    <div className="flex aspect-video min-w-[320px] flex-col gap-4 rounded bg-neutral-200 p-4 text-xl shadow-lg dark:bg-neutral-800 dark:shadow-none">
+      <h1 className="mb-2 text-4xl font-bold">
+        Ride &nbsp;
+        {canEdit ? <em className="text-2xl font-normal">(owned)</em> : null}
+      </h1>
+
+      <div className="flex">
+        <div className="flex w-1/2 flex-col">
+          <span className="font-semibold">To: </span>
+          <span className="ml-2 p-1">{r.locationTo}</span>
+        </div>
+        <div className="flex w-1/2 flex-col">
+          <span className="font-semibold">From: </span>
+          <span className="ml-2 p-1">{r.locationFrom}</span>
+        </div>
+      </div>
+
+      <div className="flex flex-col">
+        <span className="font-semibold">When: </span>
+        <span className="ml-2 p-1">
+          {new Date(r.tackingPlaceAt).toLocaleString()}
+        </span>
+      </div>
+
+      <div className="flex flex-col">
+        <span className="font-semibold">Driver: </span>
+        <span className="ml-2 p-1">{r.driverEmail}</span>
+      </div>
+
+      <div className="flex flex-col">
+        <span className="font-semibold">Recurs: </span>
+        <input
+          disabled={!canEdit}
+          ref={inputScheduleRef}
+          className="ml-2 border-b border-neutral-200 bg-transparent p-1 focus:border-cyan-500 focus:outline-none disabled:border-none dark:border-neutral-500"
+          defaultValue={displaySchedule(r.schedule)}
+          onKeyDown={(e) => {
+            if (e.key !== "Enter") {
+              return;
+            }
+
+            const schedule = parseRecuring(inputScheduleRef.current!.value);
+            if (!schedule) {
+              toast("Invalid ride schedule.", { type: "warning" });
+              return;
+            }
+
+            updateSchedule.mutate({ schedule, rideEventId: r.rideEventId });
+          }}
+        />
+      </div>
     </div>
   );
 }
