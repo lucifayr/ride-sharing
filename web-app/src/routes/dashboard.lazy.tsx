@@ -3,7 +3,7 @@ import { useUserStore } from "../lib/stores";
 import { LoadingSpinner } from "../lib/components/Spinner";
 import { CreateRideForm } from "../lib/components/CreateRideForm";
 import { useQuery } from "@tanstack/react-query";
-import { RideEvent } from "../lib/models/ride";
+import { RideEvent, RideSchedule } from "../lib/models/ride";
 import { AuthTokens } from "../lib/models/user";
 import { ReactNode, useRef } from "react";
 import { STYLES, QUERY_KEYS, isRestErr, toastRestErr } from "../lib/utils";
@@ -63,6 +63,7 @@ function RideList({ tokens }: { tokens: AuthTokens }) {
       mapField: (to) => (
         <a
           href={`https://www.google.com/maps/search/Austria+${encodeURIComponent(to.replace(" ", "+"))}`}
+          target="_blank"
         >
           {to}
         </a>
@@ -73,6 +74,7 @@ function RideList({ tokens }: { tokens: AuthTokens }) {
       mapField: (from) => (
         <a
           href={`https://www.google.com/maps/search/Austria+${encodeURIComponent(from.replace(" ", "+"))}`}
+          target="_blank"
         >
           {from}
         </a>
@@ -92,33 +94,7 @@ function RideList({ tokens }: { tokens: AuthTokens }) {
     },
     schedule: {
       label: "Recurs",
-      mapField: (schedule) => {
-        if (schedule === null) {
-          return "---";
-        }
-
-        if (schedule.unit === "weekdays") {
-          if (schedule.weekdays === null) {
-            return "---";
-          }
-
-          if (schedule.interval === 1) {
-            // e.g. every monday, friday
-            return `every ${schedule.weekdays.join("/")}`;
-          }
-
-          // e.g. every 4. monday/tuesday
-          return `every ${schedule.interval}. ${schedule.weekdays.join("/")}`;
-        }
-
-        if (schedule.interval === 1) {
-          // e.g. every day
-          return `every ${schedule.unit.replace(/s$/, "")}`;
-        }
-
-        // e.g. every 3 weeks
-        return `every ${schedule.interval} ${schedule.unit}`;
-      },
+      mapField: displaySchedule,
     },
   };
 
@@ -247,4 +223,32 @@ function RideListRow({
       </td>
     </tr>
   );
+}
+
+export function displaySchedule(schedule: RideSchedule | null): string {
+  if (schedule === null) {
+    return "---";
+  }
+
+  if (schedule.unit === "weekdays") {
+    if (schedule.weekdays === null) {
+      return "---";
+    }
+
+    if (schedule.interval === 1) {
+      // e.g. every monday, friday
+      return `every ${schedule.weekdays.join("/")}`;
+    }
+
+    // e.g. every 4. monday/tuesday
+    return `every ${schedule.interval}. ${schedule.weekdays.join("/")}`;
+  }
+
+  if (schedule.interval === 1) {
+    // e.g. every day
+    return `every ${schedule.unit.replace(/s$/, "")}`;
+  }
+
+  // e.g. every 3 weeks
+  return `every ${schedule.interval} ${schedule.unit}`;
 }

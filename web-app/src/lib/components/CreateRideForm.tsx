@@ -260,7 +260,7 @@ const validWeekdays = [
   "sunday",
 ];
 
-function parseRecuring(text: string): RideSchedule | undefined {
+export function parseRecuring(text: string): RideSchedule | undefined {
   const parts = text.trim().toLowerCase().split(" ", 2);
   let partUnit: string;
   let interval = 1;

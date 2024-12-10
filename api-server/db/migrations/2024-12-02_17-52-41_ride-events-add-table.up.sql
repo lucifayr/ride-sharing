@@ -1,12 +1,12 @@
 CREATE TABLE ride_events (
-    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(8)))),
+    id TEXT PRIMARY KEY DEFAULT (lower(hex (randomblob (8)))),
     ride_id TEXT NOT NULL,
     location_from TEXT NOT NULL,
     location_to TEXT NOT NULL,
     driver TEXT NOT NULL,
     status TEXT NOT NULL CHECK (status IN ('upcoming', 'done', 'canceled')) DEFAULT ('upcoming'),
     tacking_place_at TEXT NOT NULL CHECK (
-        tacking_place_at = strftime('%Y-%m-%dT%H:%M:%SZ', tacking_place_at)
+        tacking_place_at = strftime ('%Y-%m-%dT%H:%M:%SZ', tacking_place_at)
     ),
     transport_limit INTEGER NOT NULL CHECK (transport_limit > 0),
     FOREIGN KEY (ride_id) REFERENCES rides (id),
@@ -43,11 +43,11 @@ VALUES
     (
         NEW.id,
         NEW.location_from,
-        new.location_to,
-        new.driver,
+        NEW.location_to,
+        NEW.driver,
         'upcoming',
-        new.tacking_place_at,
-        new.transport_limit
+        NEW.tacking_place_at,
+        NEW.transport_limit
     );
 
 

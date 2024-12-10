@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { isRestErr, QUERY_KEYS, toastRestErr } from "../lib/utils";
 import { RideEvent } from "../lib/models/ride";
 import { AuthTokens } from "../lib/models/user";
+import { displaySchedule } from "./dashboard.lazy";
 
 export const Route = createFileRoute("/rides/$rideId")({
   component: RouteComponent,
@@ -89,15 +90,12 @@ function RideData({ tokens, rideId }: { tokens: AuthTokens; rideId: string }) {
 
   const r = ride.data;
   return (
-    <div className="relative flex aspect-video min-w-[320px] flex-col gap-2 rounded bg-neutral-200 p-4 shadow-lg dark:bg-neutral-800 dark:shadow-none">
-      <h1 className="absolute left-0 top-0 translate-x-[-10%] translate-y-[-60%] text-3xl font-bold">
-        Ride
-      </h1>
-      <span>Driver: {r.driverEmail}</span>
+    <div className="relative flex aspect-video min-w-[320px] flex-col gap-2 rounded bg-neutral-200 p-4 text-xl shadow-lg dark:bg-neutral-800 dark:shadow-none">
       <span>To: {r.locationTo}</span>
       <span>From: {r.locationFrom}</span>
       <span>When: {new Date(r.tackingPlaceAt).toLocaleString()}</span>
-      <span>Created By: {r.createdByEmail}</span>
+      <span>Driver: {r.driverEmail}</span>
+      <span>Recurs: {displaySchedule(r.schedule)}</span>
     </div>
   );
 }

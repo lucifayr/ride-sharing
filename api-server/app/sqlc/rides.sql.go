@@ -121,6 +121,28 @@ func (q *Queries) RidesCreateScheduleWeekday(ctx context.Context, arg RidesCreat
 	return err
 }
 
+const ridesDropSchedule = `-- name: RidesDropSchedule :exec
+DELETE FROM ride_schedules
+WHERE
+    id = ?
+`
+
+func (q *Queries) RidesDropSchedule(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, ridesDropSchedule, id)
+	return err
+}
+
+const ridesDropScheduleWeekdays = `-- name: RidesDropScheduleWeekdays :exec
+DELETE FROM ride_schedule_weekdays
+WHERE
+    ride_schedule_id = ?
+`
+
+func (q *Queries) RidesDropScheduleWeekdays(ctx context.Context, rideScheduleID string) error {
+	_, err := q.db.ExecContext(ctx, ridesDropScheduleWeekdays, rideScheduleID)
+	return err
+}
+
 const ridesGetEvent = `-- name: RidesGetEvent :one
 SELECT
     r.id AS ride_id,
@@ -451,4 +473,22 @@ func (q *Queries) RidesMarkPastEventsDone(ctx context.Context, tackingPlaceAt st
 		return nil, err
 	}
 	return items, nil
+}
+
+const ridesUpdateEventStatus = `-- name: RidesUpdateEventStatus :exec
+UPDATE ride_events
+SET
+    status = ?
+WHERE
+    id = ?
+`
+
+type RidesUpdateEventStatusParams struct {
+	Status string `json:"status"`
+	ID     string `json:"id"`
+}
+
+func (q *Queries) RidesUpdateEventStatus(ctx context.Context, arg RidesUpdateEventStatusParams) error {
+	_, err := q.db.ExecContext(ctx, ridesUpdateEventStatus, arg.Status, arg.ID)
+	return err
 }

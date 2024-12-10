@@ -24,6 +24,7 @@ const (
 
 func rideHandlers(h *http.ServeMux) {
 	h.HandleFunc("POST /rides", handle(createRide).with(bearerAuth(false)).build())
+	h.HandleFunc("POST /rides/update", handle(updateRide).with(bearerAuth(false)).build())
 	h.HandleFunc("GET /rides/many", handle(getManyRides).with(bearerAuth(false)).build())
 	h.HandleFunc("GET /rides/by-id/{id}", handle(getEventById).with(bearerAuth(false)).build())
 	h.HandleFunc("GET /rides/upcoming/by-id/{id}", handle(getUpcomingById).with(bearerAuth(false)).build())
@@ -53,10 +54,108 @@ type createRideParams struct {
 	Schedule       *rideSchedule `json:"schedule"`
 }
 
+type updateRideParams struct {
+	RideEventId *string       `json:"rideEventId" validate:"required"`
+	Schedule    *rideSchedule `json:"schedule"`
+	Status      *string       `json:"status"`
+}
+
 type rideSchedule struct {
 	Unit     *string   `json:"unit" validate:"required"`
 	Interval *int64    `json:"interval" validate:"required"`
 	Weekdays *[]string `json:"weekdays"`
+}
+
+func updateRide(w http.ResponseWriter, r *http.Request) {
+	user := getMiddlewareData[sqlc.User](r, "user")
+
+	data, err := io.ReadAll(r.Body)
+	if err != nil {
+		log.Println("Error: Invalid request body.", "error:", err)
+		httpWriteErr(w, http.StatusBadRequest, "Invalid request body.")
+		return
+	}
+
+	var updateParams updateRideParams
+	err = json.Unmarshal(data, &updateParams)
+	if err != nil {
+		log.Println("Error: Invalid JSON in request body.", "error:", err)
+		httpWriteErr(w, http.StatusBadRequest, "Invalid JSON in request body.", err.Error())
+		return
+	}
+
+	tx, err := state.getDBTx(r.Context())
+	assert.Nil(err)
+
+	queriesTx := state.queries.WithTx(tx)
+	err = markPastRideEventsAsDoneAndCreateScheduled(queriesTx, r.Context())
+	if err != nil {
+		httpWriteErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	event, err := queriesTx.RidesGetEvent(r.Context(), *updateParams.RideEventId)
+	if errors.Is(err, sql.ErrNoRows) {
+		httpWriteErr(w, http.StatusNotFound, "No ride event exists for the event with 'id'.")
+		return
+	}
+
+	if event.CreatedBy != user.ID {
+		httpWriteErr(w, http.StatusBadRequest, "You are not the owner of this ride event.")
+		return
+	}
+
+	// update schedule
+	if updateParams.Schedule != nil {
+		err := queriesTx.RidesDropScheduleWeekdays(r.Context(), event.RideScheduleID.String)
+		assert.Nil(err)
+		queriesTx.RidesDropSchedule(r.Context(), event.RideScheduleID.String)
+		assert.Nil(err)
+
+		argsCreateSchedule := sqlc.RidesCreateScheduleParams{
+			RideID:           event.RideID,
+			ScheduleInterval: *updateParams.Schedule.Interval,
+			Unit:             *updateParams.Schedule.Unit,
+		}
+
+		scheduleId, err := queriesTx.RidesCreateSchedule(r.Context(), argsCreateSchedule)
+		assert.Nil(err)
+
+		if *updateParams.Schedule.Unit == "weekdays" {
+			if updateParams.Schedule.Weekdays == nil || len(*updateParams.Schedule.Weekdays) == 0 {
+				httpWriteErr(w, http.StatusBadRequest, "Invalid schedule. Field 'unit' is 'weekdays' but the field 'weekdays' is empty or undefined.")
+				return
+			}
+
+			for _, day := range *updateParams.Schedule.Weekdays {
+				_, err = weekdayToInt(day)
+				if err != nil {
+					httpWriteErr(w, http.StatusBadRequest, "Invalid schedule weekday. Only lowercase standard english weekday names are allowed.")
+					return
+				}
+
+				argsCreateScheduleWeekday := sqlc.RidesCreateScheduleWeekdayParams{
+					RideScheduleID: scheduleId,
+					Weekday:        day,
+				}
+
+				err := queriesTx.RidesCreateScheduleWeekday(r.Context(), argsCreateScheduleWeekday)
+				assert.Nil(err)
+			}
+		}
+	}
+
+	if updateParams.Status != nil {
+		argsUpdateEventStatus := sqlc.RidesUpdateEventStatusParams{
+			Status: *updateParams.Status,
+			ID:     event.RideEventID,
+		}
+		err = queriesTx.RidesUpdateEventStatus(r.Context(), argsUpdateEventStatus)
+		assert.Nil(err)
+	}
+
+	err = tx.Commit()
+	assert.Nil(err)
 }
 
 func createRide(w http.ResponseWriter, r *http.Request) {

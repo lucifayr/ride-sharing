@@ -36,6 +36,14 @@ VALUES
     (?, ?, ?) RETURNING id;
 
 
+-- name: RidesUpdateEventStatus :exec
+UPDATE ride_events
+SET
+    status = ?
+WHERE
+    id = ?;
+
+
 -- name: RidesCreateScheduleWeekday :exec
 INSERT INTO
     ride_schedule_weekdays (ride_schedule_id, weekday)
@@ -134,6 +142,18 @@ SELECT
     weekday
 FROM
     ride_schedule_weekdays
+WHERE
+    ride_schedule_id = ?;
+
+
+-- name: RidesDropSchedule :exec
+DELETE FROM ride_schedules
+WHERE
+    id = ?;
+
+
+-- name: RidesDropScheduleWeekdays :exec
+DELETE FROM ride_schedule_weekdays
 WHERE
     ride_schedule_id = ?;
 
