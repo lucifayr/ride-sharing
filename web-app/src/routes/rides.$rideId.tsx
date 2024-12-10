@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isRestErr, QUERY_KEYS, toastRestErr } from "../lib/utils";
 import { RideEvent, RideSchedule } from "../lib/models/ride";
 import { UserLoggedIn } from "../lib/models/user";
-import { displaySchedule } from "./dashboard.lazy";
+import { displaySchedule } from "./dashboard";
 import { toast } from "react-toastify";
 import { parseRecuring } from "../lib/components/CreateRideForm";
 import { useRef } from "react";

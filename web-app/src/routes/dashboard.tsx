@@ -1,4 +1,4 @@
-import { createLazyFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useUserStore } from "../lib/stores";
 import { LoadingSpinner } from "../lib/components/Spinner";
 import { CreateRideForm } from "../lib/components/CreateRideForm";
@@ -10,7 +10,7 @@ import { STYLES, QUERY_KEYS, isRestErr, toastRestErr } from "../lib/utils";
 import openLinkIcon from "../assets/open-link.svg";
 import editIcon from "../assets/edit.svg";
 
-export const Route = createLazyFileRoute("/dashboard")({
+export const Route = createFileRoute("/dashboard")({
   component: DashBoard,
 });
 
