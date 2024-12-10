@@ -2,7 +2,7 @@ SELECT
     id,
     name,
     description,
-    createdBy
+    created_by
 FROM
     ride_groups
 LIMIT

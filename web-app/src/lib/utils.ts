@@ -2,6 +2,7 @@ import { toast } from "react-toastify";
 
 export const QUERY_KEYS = {
   rideItems: "ride-items",
+  groupItems: "group-items",
   rideSingle: "ride-single",
 } as const;
 

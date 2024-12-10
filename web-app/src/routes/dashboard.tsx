@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { CreateRideForm } from "../lib/components/CreateRideForm";
 import {
   createFileRoute,
@@ -6,7 +6,7 @@ import {
   ReactNode,
   useNavigate,
 } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import openLinkIcon from "../assets/open-link.svg";
 import editIcon from "../assets/edit.svg";
 import { STYLES, QUERY_KEYS, isRestErr, toastRestErr } from "../lib/utils";
@@ -14,34 +14,83 @@ import { useUserStore } from "../lib/stores";
 import { LoadingSpinner } from "../lib/components/Spinner";
 import { AuthTokens } from "../lib/models/user";
 import { RideEvent, RideSchedule } from "../lib/models/ride";
-import ScheduledRideForm from "../lib/components/ScheduledRideForm";
-import { GroupBar } from "../lib/components/GroupBar";
 import { Group } from "../lib/models/models";
+import { useForm } from "@tanstack/react-form";
 
 export const Route = createFileRoute("/dashboard")({
   component: Dashboard,
 });
 
 function Dashboard() {
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const { user, setUser } = useUserStore();
+  const dialogRefRide = useRef<HTMLDialogElement>(null);
+  const dialogRefGroup = useRef<HTMLDialogElement>(null);
+  const { user } = useUserStore();
 
   const navigate = useNavigate();
   if (user.type !== "logged-in") {
     navigate({ to: "/" });
     return <LoadingSpinner content={<span> Redirecting to login...</span>} />;
   }
+
+  return (
+    <div className="flex gap-8">
+      <div className="flex w-full flex-col gap-2">
+        <div className="flex min-h-32 items-center justify-center gap-2">
+          <button
+            className={`text-2xl ${STYLES.button}`}
+            onClick={() => {
+              dialogRefRide.current?.showModal();
+            }}
+          >
+            Create a Ride
+          </button>
+          <button
+            className={`text-2xl ${STYLES.button}`}
+            onClick={() => {
+              dialogRefGroup.current?.showModal();
+            }}
+          >
+            Create a Group
+          </button>
+        </div>
+        <div className="mb-8 flex w-full justify-center">
+          <GroupList tokens={user.tokens} />
+        </div>
+        <RideList tokens={user.tokens} />
+        <dialog
+          className="bg-transparent"
+          ref={dialogRefRide}
+        >
+          <CreateRideForm afterSubmit={() => dialogRefRide.current?.close()} />
+        </dialog>
+        <dialog
+          className="bg-transparent"
+          ref={dialogRefGroup}
+        >
+          <CreateGroupForm
+            tokens={user.tokens}
+            afterSubmit={() => dialogRefGroup.current?.close()}
+          />
+        </dialog>
+      </div>
+    </div>
+  );
+}
+
+function GroupList({ tokens }: { tokens: AuthTokens }) {
+  const { setUser } = useUserStore();
+
   const {
     isPending,
     error,
     data: groups,
   } = useQuery({
-    queryKey: [QUERY_KEYS.rideItems],
+    queryKey: [QUERY_KEYS.groupItems],
     queryFn: async () => {
       const res = await fetch(`${import.meta.env.VITE_API_URI}/groups/many`, {
         method: "GET",
         headers: {
-          Authorization: user.tokens.accessToken,
+          Authorization: tokens.accessToken,
           Accept: "application/json",
         },
       });
@@ -53,7 +102,7 @@ function Dashboard() {
       const data = await res.json();
       if (isRestErr(data)) {
         toastRestErr(data);
-        throw new Error("Failed to load rides.");
+        throw new Error("Failed to load groups.");
       }
 
       return data as Group[];
@@ -61,39 +110,29 @@ function Dashboard() {
   });
 
   if (isPending) {
-    return <LoadingSpinner content={<span>Getting rides...</span>} />;
+    return <LoadingSpinner content={<span>Getting groups...</span>} />;
   }
 
   if (error) {
-    return <span className="text-red-500">Failed to load rides</span>;
+    return <span className="text-red-500">Failed to load groups</span>;
   }
 
   if (groups.length === 0) {
-    return <span>No rides found</span>;
+    return <span>No groups found</span>;
   }
 
   return (
-    <div className="flex gap-8">
-      <GroupBar groups={groups} />
-      <div className="flex w-full flex-col gap-2">
-        <div className="flex min-h-32 items-center justify-center">
-          <button
-            className={`text-2xl ${STYLES.button}`}
-            onClick={() => {
-              dialogRef.current?.showModal();
-            }}
-          >
-            Create a Ride
-          </button>
-        </div>
-        <RideList tokens={user.tokens} />
-        <dialog
-          className="bg-transparent"
-          ref={dialogRef}
-        >
-          <CreateRideForm afterSubmit={() => dialogRef.current?.close()} />
-        </dialog>
-      </div>
+    <div>
+      {groups.map((group, idx) => {
+        return (
+          <div key={idx}>
+            <span className="text-2xl">Group: {group.name}</span>
+            {group.description ? (
+              <em className="text-lg">&nbsp;{group.description}</em>
+            ) : null}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -303,4 +342,151 @@ export function displaySchedule(schedule: RideSchedule | null): string {
 
   // e.g. every 3 weeks
   return `every ${schedule.interval} ${schedule.unit}`;
+}
+
+type CreateGroupFormData = {
+  name: string;
+  description?: string;
+};
+
+function CreateGroupForm({
+  tokens,
+  afterSubmit,
+}: {
+  tokens: AuthTokens;
+  afterSubmit: () => void;
+}) {
+  const { setUser } = useUserStore();
+  const queryClient = useQueryClient();
+
+  const createGroup = useMutation({
+    mutationKey: ["create-group"],
+    onError: (err) => {
+      console.error(err);
+    },
+    mutationFn: async ({
+      name,
+      description,
+    }: {
+      name: string;
+      description?: string;
+    }) => {
+      const res = await fetch(`${import.meta.env.VITE_API_URI}/groups`, {
+        method: "POST",
+        headers: {
+          Authorization: tokens.accessToken,
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          name,
+          description,
+        }),
+      });
+
+      if (res.status === 401) {
+        setUser({ type: "logged-out" });
+      }
+
+      if (!res.ok) {
+        const data = await res.json();
+        if (isRestErr(data)) {
+          toastRestErr(data);
+          return;
+        }
+      }
+
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.groupItems] });
+    },
+  });
+
+  const form = useForm<CreateGroupFormData>({
+    defaultValues: {
+      name: "",
+      description: undefined,
+    },
+    onSubmit: async ({ value }) => {
+      await createGroup.mutateAsync({
+        name: value.name,
+        description: value.description,
+      });
+      afterSubmit?.();
+    },
+  });
+
+  return (
+    <div className="flex h-full flex-col items-center gap-8 bg-neutral-200 dark:bg-neutral-800 dark:text-white">
+      <div className="neutral-cyan-700 rounded-lg border-2 p-10">
+        <h2 className="doto-h2">Create a Group</h2>
+        <form
+          className="flex flex-col gap-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            form.handleSubmit();
+          }}
+        >
+          <form.Field
+            name="name"
+            children={(field) => {
+              return (
+                <div>
+                  <label className="font-bold">Group Name:</label>
+                  <input
+                    placeholder="Name..."
+                    className="w-full appearance-none rounded border-2 border-gray-200 bg-gray-200 px-4 py-2 leading-tight text-gray-700 focus:border-purple-500 focus:bg-white focus:outline-none"
+                    id={field.name}
+                    name={field.name}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => {
+                      field.handleChange(e.target.value);
+                    }}
+                  />
+                </div>
+              );
+            }}
+          ></form.Field>
+
+          <form.Field
+            name="description"
+            children={(field) => {
+              return (
+                <div>
+                  <label className="font-bold">Group Description:</label>
+                  <input
+                    placeholder="Description..."
+                    className="w-full appearance-none rounded border-2 border-gray-200 bg-gray-200 px-4 py-2 leading-tight text-gray-700 focus:border-purple-500 focus:bg-white focus:outline-none"
+                    id={field.name}
+                    name={field.name}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => {
+                      field.handleChange(e.target.value);
+                    }}
+                  />
+                </div>
+              );
+            }}
+          ></form.Field>
+
+          <form.Subscribe
+            selector={(state) => [state.canSubmit, state.isSubmitting]}
+            children={([canSubmit, isSubmitting]) => (
+              <button
+                type="submit"
+                className={`mt-2 flex items-center justify-center ${STYLES.button}`}
+                disabled={!canSubmit}
+              >
+                {isSubmitting ? (
+                  <LoadingSpinner content={"Creating..."} />
+                ) : (
+                  "Submit"
+                )}
+              </button>
+            )}
+          />
+        </form>
+      </div>
+    </div>
+  );
 }
