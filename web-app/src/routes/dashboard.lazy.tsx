@@ -155,6 +155,7 @@ function RideList({ tokens }: { tokens: AuthTokens }) {
             <RideListRow
               key={idx}
               isLast={idx === rides.length - 1}
+              isDoneOrCanceled={ride.status !== "upcoming"}
               values={Object.entries(columns).map(([key, { mapField }]) => {
                 return (mapField as any)(ride[key as keyof RideEvent]);
               })}
@@ -172,11 +173,13 @@ function RideListRow({
   values,
   isHeading,
   isLast,
+  isDoneOrCanceled,
   event,
 }: {
   values: (string | ReactNode)[];
   isHeading?: boolean;
   isLast?: boolean;
+  isDoneOrCanceled?: boolean;
   event?: RideEvent;
 }) {
   const { user } = useUserStore();
@@ -184,7 +187,7 @@ function RideListRow({
 
   return (
     <tr
-      className={`border-neutral-300 dark:border-neutral-600 ${!isLast && !isHeading ? "border-b" : ""} ${isHeading ? "sticky top-0 bg-neutral-200 dark:bg-neutral-700" : "bg-neutral-100 dark:bg-neutral-800"}`}
+      className={`border-neutral-300 dark:border-neutral-600 ${isDoneOrCanceled ? "bg-neutral-300 line-through dark:bg-neutral-500" : ""} ${!isLast && !isHeading ? "border-b" : ""} ${isHeading ? "sticky top-0 bg-neutral-200 dark:bg-neutral-700" : "bg-neutral-100 dark:bg-neutral-800"}`}
     >
       {values.map((value, idx) => {
         if (isHeading) {
