@@ -15,24 +15,30 @@ dialog::backdrop {
   font-size: 50px;
 }
 
-.groupBarSelect {
+.groupBarSelectContainerl:hover .groupBarSelectContainer {
+  display: flex 1s;
+  flex-direction: row;
+  justify-content: flex-start;
+}
+
+.groupBarSelectContainerl {
+  display: flex 1s;
+  flex-direction: row;
+  justify-content: flex-end;
+}
+
+.groupBarSelectLeft {
   width: 50%;
   height: 10px;
   background-color: rgb(6, 182, 212);
   border-radius: 10px;
   margin-left: 2%;
-  animation-name: GroupBarAnimation;
-  animation-duration: 1s;
 }
 
-@keyframes GroupBarAnimation {
-  from {
-    width: 0%;
-    background-color: rgb(6, 182, 212);
-  }
-
-  to {
-    width: 50%;
-    background-color: rgb(249, 115, 22);
-  }
+.groupBarSelectRight {
+  width: 45%;
+  height: 10px;
+  background-color: rgb(249, 115, 22);
+  border-radius: 10px;
+  margin-left: 2%;
 }
