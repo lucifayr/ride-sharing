@@ -121,6 +121,41 @@ function RideData({ user, rideId }: { user: UserLoggedIn; rideId: string }) {
     },
   });
 
+  const cancelRide = useMutation({
+    mutationKey: ["cancel-ride"],
+    onError: (err) => {
+      console.error(err);
+    },
+    mutationFn: async (rideEventId: string) => {
+      const res = await fetch(`${import.meta.env.VITE_API_URI}/rides/update`, {
+        method: "POST",
+        headers: {
+          Authorization: user.tokens.accessToken,
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          rideEventId,
+          status: "canceled",
+        }),
+      });
+
+      if (res.status === 401) {
+        setUser({ type: "logged-out" });
+      }
+
+      if (!res.ok) {
+        const data = await res.json();
+        if (isRestErr(data)) {
+          toastRestErr(data);
+          return;
+        }
+      }
+
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.rideSingle] });
+      toast("Canceled ride", { type: "success" });
+    },
+  });
+
   if (isPending) {
     return <LoadingSpinner content={<span>Getting ride...</span>} />;
   }
@@ -160,6 +195,23 @@ function RideData({ user, rideId }: { user: UserLoggedIn; rideId: string }) {
         <span className="ml-2 p-1">
           {new Date(r.tackingPlaceAt).toLocaleString()}
         </span>
+      </div>
+
+      <div className="flex flex-col">
+        <span className="font-semibold">Status: </span>
+        <div className="flex justify-between">
+          <span className="ml-2 p-1">{r.status}</span>
+          {r.status === "upcoming" ? (
+            <button
+              className="font-bold text-red-500"
+              onClick={() => {
+                cancelRide.mutate(r.rideEventId);
+              }}
+            >
+              X
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <div className="flex flex-col">
