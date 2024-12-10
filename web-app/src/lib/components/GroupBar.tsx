@@ -4,7 +4,7 @@ export const GroupBar = () => {
   const [barMode, setBarMode] = useState("Groups");
   return (
     <div className="flex h-full flex-col">
-      <div className="m-2 flex w-1/4 flex-grow flex-col overflow-hidden rounded-xl border-2 border-gray-200 p-2 text-center">
+      <div className="m-2 flex flex-grow flex-col overflow-hidden rounded-xl border-2 border-gray-200 p-2 text-center">
         <div
           onClick={() => {
             if (barMode === "Groups") {
