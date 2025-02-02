@@ -25,24 +25,37 @@ const (
 func rideHandlers(h *http.ServeMux) {
 	h.HandleFunc("POST /rides", handle(createRide).with(bearerAuth(false)).build())
 	h.HandleFunc("POST /rides/update", handle(updateRide).with(bearerAuth(false)).build())
+	h.HandleFunc("POST /rides/join", handle(joinRide).with(bearerAuth(false)).build())
 	h.HandleFunc("GET /rides/many", handle(getManyRides).with(bearerAuth(false)).build())
 	h.HandleFunc("GET /rides/by-id/{id}", handle(getEventById).with(bearerAuth(false)).build())
 	h.HandleFunc("GET /rides/upcoming/by-id/{id}", handle(getUpcomingById).with(bearerAuth(false)).build())
 }
 
 type RideEventData struct {
-	RideId         string        `json:"rideId"`
-	RideEventId    string        `json:"rideEventId"`
-	LocationFrom   string        `json:"locationFrom"`
-	LocationTo     string        `json:"locationTo"`
-	TackingPlaceAt time.Time     `json:"tackingPlaceAt"`
-	Status         string        `json:"status"`
-	CreatedBy      string        `json:"createdBy"`
-	CreatedByEmail string        `json:"createdByEmail"`
-	DriverId       string        `json:"driverId"`
-	DriverEmail    string        `json:"driverEmail"`
-	TransportLimit int64         `json:"transportLimit"`
-	Schedule       *rideSchedule `json:"schedule"`
+	RideId         string            `json:"rideId"`
+	RideEventId    string            `json:"rideEventId"`
+	LocationFrom   string            `json:"locationFrom"`
+	LocationTo     string            `json:"locationTo"`
+	TackingPlaceAt time.Time         `json:"tackingPlaceAt"`
+	Status         string            `json:"status"`
+	CreatedBy      string            `json:"createdBy"`
+	CreatedByEmail string            `json:"createdByEmail"`
+	DriverId       string            `json:"driverId"`
+	DriverEmail    string            `json:"driverEmail"`
+	TransportLimit int64             `json:"transportLimit"`
+	Schedule       *rideSchedule     `json:"schedule"`
+	Participants   []rideParticipant `json:"participants"`
+}
+
+type rideSchedule struct {
+	Unit     *string   `json:"unit" validate:"required"`
+	Interval *int64    `json:"interval" validate:"required"`
+	Weekdays *[]string `json:"weekdays"`
+}
+
+type rideParticipant struct {
+	UserId string `json:"userId"`
+	Email  string `json:"email"`
 }
 
 type createRideParams struct {
@@ -54,16 +67,19 @@ type createRideParams struct {
 	Schedule       *rideSchedule `json:"schedule"`
 }
 
+type createRideResponse struct {
+	RideId      string `json:"rideId"`
+	RideEventId string `json:"rideEventId"`
+}
+
 type updateRideParams struct {
 	RideEventId *string       `json:"rideEventId" validate:"required"`
 	Schedule    *rideSchedule `json:"schedule"`
 	Status      *string       `json:"status"`
 }
 
-type rideSchedule struct {
-	Unit     *string   `json:"unit" validate:"required"`
-	Interval *int64    `json:"interval" validate:"required"`
-	Weekdays *[]string `json:"weekdays"`
+type joinRideParams struct {
+	RideEventId *string `json:"rideEventId" validate:"required"`
 }
 
 func updateRide(w http.ResponseWriter, r *http.Request) {
@@ -167,6 +183,67 @@ func updateRide(w http.ResponseWriter, r *http.Request) {
 	assert.Nil(err)
 }
 
+func joinRide(w http.ResponseWriter, r *http.Request) {
+	user := getMiddlewareData[sqlc.User](r, "user")
+
+	data, err := io.ReadAll(r.Body)
+	if err != nil {
+		log.Println("Error: Invalid request body.", "error:", err)
+		httpWriteErr(w, http.StatusBadRequest, "Invalid request body.")
+		return
+	}
+
+	var joinParams joinRideParams
+	err = json.Unmarshal(data, &joinParams)
+	if err != nil {
+		log.Println("Error: Invalid JSON in request body.", "error:", err)
+		httpWriteErr(w, http.StatusBadRequest, "Invalid JSON in request body.", err.Error())
+		return
+	}
+
+	err = utils.Validate.Struct(joinParams)
+	if err != nil {
+		log.Println("Error: Invalid JSON in request body.", "error:", err)
+		httpWriteErr(w, http.StatusBadRequest, "Missing/Invalid fields in request body.", err.Error())
+		return
+	}
+
+	tx, err := state.getDBTx(r.Context())
+	assert.Nil(err)
+
+	queriesTx := state.queries.WithTx(tx)
+	err = markPastRideEventsAsDoneAndCreateScheduled(queriesTx, r.Context())
+	if err != nil {
+		httpWriteErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	event, err := queriesTx.RidesGetEvent(r.Context(), *joinParams.RideEventId)
+	if errors.Is(err, sql.ErrNoRows) {
+		httpWriteErr(w, http.StatusNotFound, "No ride event exists for the event with 'id'.")
+		return
+	}
+	assert.Nil(err)
+
+	participants, err := queriesTx.RidesCountEventParticipants(r.Context(), event.RideEventID)
+	assert.Nil(err)
+
+	if participants >= event.TransportLimit {
+		httpWriteErr(w, http.StatusConflict, "Ride is already full.")
+		return
+	}
+
+	joinArgs := sqlc.RidesJoinEventParams{
+		RideEventID: event.RideEventID,
+		UserID:      user.ID,
+	}
+	err = queriesTx.RidesJoinEvent(r.Context(), joinArgs)
+	assert.Nil(err)
+
+	err = tx.Commit()
+	assert.Nil(err)
+}
+
 func createRide(w http.ResponseWriter, r *http.Request) {
 	user := getMiddlewareData[sqlc.User](r, "user")
 
@@ -251,11 +328,24 @@ func createRide(w http.ResponseWriter, r *http.Request) {
 	rideLatest, err := queriesTx.RidesGetLatest(r.Context(), rideId)
 	assert.Nil(err)
 
+	// Add user to ride
+	joinArgs := sqlc.RidesJoinEventParams{
+		RideEventID: rideLatest.RideEventID,
+		UserID:      user.ID,
+	}
+	err = queriesTx.RidesJoinEvent(r.Context(), joinArgs)
+	assert.Nil(err)
+
 	err = tx.Commit()
 	assert.Nil(err)
 
-	resp, err := json.Marshal(rideLatest)
-	assert.Nil(err, "Failed to serialize ride.")
+	response := createRideResponse{
+		RideId:      rideLatest.RideID,
+		RideEventId: rideLatest.RideEventID,
+	}
+
+	resp, err := json.Marshal(response)
+	assert.Nil(err, "Failed to serialize create ride response.")
 	w.WriteHeader(201)
 	w.Write(resp)
 }
@@ -296,7 +386,10 @@ func getManyRides(w http.ResponseWriter, r *http.Request) {
 			weekdays = &days
 		}
 
-		event, err := buildRideEventData(rideRow(row), weekdays)
+		rideParticipants, err := state.queries.RidesGetParticipants(r.Context(), row.RideEventID)
+		assert.Nil(err)
+
+		event, err := buildRideEventData(rideRow(row), weekdays, rideParticipants)
 		assert.Nil(err)
 
 		rides[idx] = event
@@ -346,7 +439,11 @@ func getEventById(w http.ResponseWriter, r *http.Request) {
 		assert.Nil(err)
 		weekdays = &days
 	}
-	ride, err := buildRideEventData(eventToRideRow(event), weekdays)
+
+	rideParticipants, err := state.queries.RidesGetParticipants(r.Context(), event.RideEventID)
+	assert.Nil(err)
+
+	ride, err := buildRideEventData(eventToRideRow(event), weekdays, rideParticipants)
 	assert.Nil(err)
 
 	var resp []byte
@@ -388,7 +485,11 @@ func getUpcomingById(w http.ResponseWriter, r *http.Request) {
 		assert.Nil(err)
 		weekdays = &days
 	}
-	ride, err := buildRideEventData(latestToRideRow(rideLatest), weekdays)
+
+	rideParticipants, err := state.queries.RidesGetParticipants(r.Context(), rideLatest.RideEventID)
+	assert.Nil(err)
+
+	ride, err := buildRideEventData(latestToRideRow(rideLatest), weekdays, rideParticipants)
 	assert.Nil(err)
 
 	var resp []byte
@@ -453,11 +554,13 @@ func latestToRideRow(row sqlc.RidesGetLatestRow) rideRow {
 	}
 }
 
-func buildRideEventData(ride rideRow, weekdays *[]string) (*RideEventData, error) {
+func buildRideEventData(ride rideRow, weekdays *[]string, participants []sqlc.RidesGetParticipantsRow) (*RideEventData, error) {
 	tackingPlaceAt, err := time.Parse(time.RFC3339, ride.TackingPlaceAt)
 	if err != nil {
 		return nil, err
 	}
+
+	log.Println(participants)
 
 	var schedule *rideSchedule = nil
 	if ride.RideScheduleID.Valid {
@@ -465,6 +568,14 @@ func buildRideEventData(ride rideRow, weekdays *[]string) (*RideEventData, error
 			Unit:     &ride.RideScheduleUnit.String,
 			Interval: &ride.RideScheduleInterval.Int64,
 			Weekdays: weekdays,
+		}
+	}
+
+	participantsMapped := make([]rideParticipant, len(participants))
+	for idx, participant := range participants {
+		participantsMapped[idx] = rideParticipant{
+			UserId: participant.ID,
+			Email:  participant.Email,
 		}
 	}
 
@@ -481,6 +592,7 @@ func buildRideEventData(ride rideRow, weekdays *[]string) (*RideEventData, error
 		DriverEmail:    ride.DriverEmail,
 		TransportLimit: ride.TransportLimit,
 		Schedule:       schedule,
+		Participants:   participantsMapped,
 	}
 
 	return &rideEvent, nil

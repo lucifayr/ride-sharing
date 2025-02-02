@@ -102,7 +102,7 @@ function Shell({ children }: { children: ReactNode }) {
   return (
     <div className="flex h-full flex-col items-center justify-center">
       <div className="flex max-h-[360px] max-w-[480px] flex-col items-center gap-4 rounded p-8 light:shadow-md light:shadow-gray-200 dark:bg-neutral-800">
-        <h1 className="text-4xl font-bold">Ride Sharing (new text)</h1>
+        <h1 className="text-4xl font-bold">Ride Sharing</h1>
         {children}
       </div>
     </div>

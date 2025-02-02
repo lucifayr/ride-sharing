@@ -10,6 +10,22 @@ import (
 	"database/sql"
 )
 
+const ridesCountEventParticipants = `-- name: RidesCountEventParticipants :one
+SELECT
+    COUNT(user_id)
+FROM
+    ride_participants
+WHERE
+    ride_event_id = ?
+`
+
+func (q *Queries) RidesCountEventParticipants(ctx context.Context, rideEventID string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, ridesCountEventParticipants, rideEventID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const ridesCreate = `-- name: RidesCreate :one
 INSERT INTO
     rides (
@@ -387,6 +403,45 @@ func (q *Queries) RidesGetMany(ctx context.Context, offset int64) ([]RidesGetMan
 	return items, nil
 }
 
+const ridesGetParticipants = `-- name: RidesGetParticipants :many
+SELECT
+    u.id,
+    u.email
+FROM
+    ride_participants rp
+    INNER JOIN users u ON rp.user_id = u.id
+WHERE
+    rp.ride_event_id = ?
+`
+
+type RidesGetParticipantsRow struct {
+	ID    string `json:"id"`
+	Email string `json:"email"`
+}
+
+func (q *Queries) RidesGetParticipants(ctx context.Context, rideEventID string) ([]RidesGetParticipantsRow, error) {
+	rows, err := q.db.QueryContext(ctx, ridesGetParticipants, rideEventID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []RidesGetParticipantsRow
+	for rows.Next() {
+		var i RidesGetParticipantsRow
+		if err := rows.Scan(&i.ID, &i.Email); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const ridesGetSchedule = `-- name: RidesGetSchedule :one
 SELECT
     id,
@@ -441,6 +496,23 @@ func (q *Queries) RidesGetScheduleWeekdays(ctx context.Context, rideScheduleID s
 		return nil, err
 	}
 	return items, nil
+}
+
+const ridesJoinEvent = `-- name: RidesJoinEvent :exec
+INSERT INTO
+    ride_participants (ride_event_id, user_id)
+VALUES
+    (?, ?)
+`
+
+type RidesJoinEventParams struct {
+	RideEventID string `json:"rideEventId"`
+	UserID      string `json:"userId"`
+}
+
+func (q *Queries) RidesJoinEvent(ctx context.Context, arg RidesJoinEventParams) error {
+	_, err := q.db.ExecContext(ctx, ridesJoinEvent, arg.RideEventID, arg.UserID)
+	return err
 }
 
 const ridesMarkPastEventsDone = `-- name: RidesMarkPastEventsDone :many
