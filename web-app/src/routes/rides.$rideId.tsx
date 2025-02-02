@@ -241,6 +241,17 @@ function RideData({ user, rideId }: { user: UserLoggedIn; rideId: string }) {
           }}
         />
       </div>
+
+      <div className="flex flex-col">
+        <span className="font-semibold">Participants: </span>
+        {r.participants.length > 0 ? (
+          r.participants.map((p) => {
+            return <span className="ml-2 p-1">{p.email}</span>;
+          })
+        ) : (
+          <span className="ml-2 p-1">---</span>
+        )}
+      </div>
     </div>
   );
 }

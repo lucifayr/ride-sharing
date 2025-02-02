@@ -11,10 +11,16 @@ export type RideEvent = {
   transportLimit: number;
   status: string;
   schedule: RideSchedule | null;
+  participants: RideParticipant[];
 };
 
 export type RideSchedule = {
   unit: string;
   interval: number;
   weekdays: string[] | null;
+};
+
+export type RideParticipant = {
+  userId: string;
+  email: string;
 };

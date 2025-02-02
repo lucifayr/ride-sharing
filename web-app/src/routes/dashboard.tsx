@@ -143,7 +143,7 @@ function RideList({ tokens }: { tokens: AuthTokens }) {
   const columns: {
     [K in keyof RideEvent]?: {
       label: string;
-      mapField: (field: RideEvent[K]) => string | ReactNode;
+      mapField: (field: RideEvent[K], ride: RideEvent) => string | ReactNode;
     };
   } = {
     locationTo: {
@@ -153,7 +153,7 @@ function RideList({ tokens }: { tokens: AuthTokens }) {
           href={`https://www.google.com/maps/search/Austria+${encodeURIComponent(to.replace(" ", "+"))}`}
           target="_blank"
         >
-          {to}
+          {to ?? "---"}
         </a>
       ),
     },
@@ -164,7 +164,7 @@ function RideList({ tokens }: { tokens: AuthTokens }) {
           href={`https://www.google.com/maps/search/Austria+${encodeURIComponent(from.replace(" ", "+"))}`}
           target="_blank"
         >
-          {from}
+          {from ?? "---"}
         </a>
       ),
     },
@@ -174,15 +174,23 @@ function RideList({ tokens }: { tokens: AuthTokens }) {
     },
     driverEmail: {
       label: "Driver",
-      mapField: (email) => email,
+      mapField: (email) => email ?? "---",
     },
     status: {
-      label: "status",
-      mapField: (status) => status,
+      label: "Status",
+      mapField: (status) => status ?? "---",
     },
     schedule: {
       label: "Recurs",
       mapField: displaySchedule,
+    },
+    participants: {
+      label: "Participants",
+      mapField: (participants, ride) => {
+        return participants
+          ? `${participants.length}/${ride.transportLimit ?? "---"}`
+          : "---";
+      },
     },
   };
 
@@ -245,7 +253,7 @@ function RideList({ tokens }: { tokens: AuthTokens }) {
               isLast={idx === rides.length - 1}
               isDoneOrCanceled={ride.status !== "upcoming"}
               values={Object.entries(columns).map(([key, { mapField }]) => {
-                return (mapField as any)(ride[key as keyof RideEvent]);
+                return (mapField as any)(ride[key as keyof RideEvent], ride);
               })}
               event={ride}
             />

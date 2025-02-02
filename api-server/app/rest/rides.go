@@ -560,8 +560,6 @@ func buildRideEventData(ride rideRow, weekdays *[]string, participants []sqlc.Ri
 		return nil, err
 	}
 
-	log.Println(participants)
-
 	var schedule *rideSchedule = nil
 	if ride.RideScheduleID.Valid {
 		schedule = &rideSchedule{
