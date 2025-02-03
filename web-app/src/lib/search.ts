@@ -26,32 +26,36 @@ export function parseSearchString(rawSearchString: string): SearchFilters {
   let filterKey: keyof SearchFilters | undefined;
 
   for (let i = 0; i < rawSearchString.length; i++) {
-    const char = rawSearchString.charAt(i);
-    const isFilterStart = char === ":";
-
     let filterMatched = false;
 
-    if (isFilterStart) {
-      const nextSpaceIdx = rawSearchString.indexOf(" ", i + 1);
-      if (nextSpaceIdx !== -1) {
-        const found = rawSearchString.substring(i + 1, nextSpaceIdx);
-        const entry = Object.entries(SEARCH_FILTERS).find(([_, value]) => {
-          return value === found;
-        });
+    const char = rawSearchString.charAt(i);
+    const isFilterStart = char === ":";
+    const nextSpaceIdx = rawSearchString.indexOf(" ", i + 1);
 
-        if (entry !== undefined) {
-          if (filterKey !== undefined && filterValue !== undefined) {
-            const value = parseFilterValue(filterKey, filterValue);
-            if (value !== undefined) {
-              filters[filterKey] = value as any;
-            }
+    // Check if we have found a filter of the form `:{filter-name} {value}` and
+    // try parsing its name.
+    if (isFilterStart && nextSpaceIdx !== -1) {
+      const foundName = rawSearchString.substring(i + 1, nextSpaceIdx);
+      const matchingFilter = Object.entries(SEARCH_FILTERS).find(
+        ([_, value]) => {
+          return value === foundName;
+        },
+      );
+
+      if (matchingFilter !== undefined) {
+        // If there is already an active filter, parse its value and add it to
+        // `filters`.
+        if (filterKey !== undefined && filterValue !== undefined) {
+          const value = parseFilterValue(filterKey, filterValue);
+          if (value !== undefined) {
+            filters[filterKey] = value as any;
           }
-
-          filterKey = entry[0] as keyof SearchFilters;
-          filterValue = "";
-          i = nextSpaceIdx; // skip over the filter name that was just scanned
-          filterMatched = true;
         }
+
+        filterKey = matchingFilter[0] as keyof SearchFilters;
+        filterValue = "";
+        i = nextSpaceIdx; // skip over the filter name that was just scanned
+        filterMatched = true;
       }
     }
 
@@ -60,6 +64,7 @@ export function parseSearchString(rawSearchString: string): SearchFilters {
     }
   }
 
+  // Add any remaining filter to `filters`.
   if (filterKey !== undefined && filterValue !== undefined) {
     const value = parseFilterValue(filterKey, filterValue);
     if (value !== undefined) {
