@@ -9,6 +9,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isRestErr, QUERY_KEYS, STYLES, toastRestErr } from "../lib/utils";
 import { LoadingSpinner } from "../lib/components/Spinner";
 import { toast } from "react-toastify";
+import checkmarkIcon from "../assets/checkmark.svg";
 
 export const Route = createFileRoute("/groups/$groupId")({
   component: RouteComponent,
@@ -112,7 +113,7 @@ function GroupData({ groupId, user }: { groupId: string; user: UserLoggedIn }) {
       }
 
       queryClient.invalidateQueries({
-        queryKey: [QUERY_KEYS.groupSingle, QUERY_KEYS.groupItems],
+        queryKey: [QUERY_KEYS.groupSingle, `group-${groupId}`],
       });
       toast("Updated name", { type: "success" });
     },
@@ -149,9 +150,48 @@ function GroupData({ groupId, user }: { groupId: string; user: UserLoggedIn }) {
       }
 
       queryClient.invalidateQueries({
-        queryKey: [QUERY_KEYS.groupSingle, QUERY_KEYS.groupItems],
+        queryKey: [QUERY_KEYS.groupSingle, `group-${groupId}`],
       });
       toast("Updated description", { type: "success" });
+    },
+  });
+
+  const joinGroup = useMutation({
+    mutationKey: ["join-group"],
+    onError: (err) => {
+      console.error(err);
+    },
+    mutationFn: async (groupId: string) => {
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URI}/groups/by-id/${groupId}/members/join`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: user.tokens.accessToken,
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            userId: user.id,
+          }),
+        },
+      );
+
+      if (res.status === 401) {
+        setUser({ type: "logged-out" });
+      }
+
+      if (!res.ok) {
+        const data = await res.json();
+        if (isRestErr(data)) {
+          toastRestErr(data);
+          return;
+        }
+      }
+
+      queryClient.invalidateQueries({
+        queryKey: [QUERY_KEYS.groupSingle, `group-${groupId}`],
+      });
+      toast("Approval from the group owner is pending...", { type: "info" });
     },
   });
 
@@ -168,7 +208,7 @@ function GroupData({ groupId, user }: { groupId: string; user: UserLoggedIn }) {
       action: "approve" | "ban";
     }) => {
       const res = await fetch(
-        `${import.meta.env.VITE_API_URI}/groups/by-id/members/${action}`,
+        `${import.meta.env.VITE_API_URI}/groups/by-id/${groupId}/members/${action}`,
         {
           method: "POST",
           headers: {
@@ -194,7 +234,7 @@ function GroupData({ groupId, user }: { groupId: string; user: UserLoggedIn }) {
       }
 
       queryClient.invalidateQueries({
-        queryKey: [QUERY_KEYS.groupSingle, QUERY_KEYS.groupItems],
+        queryKey: [QUERY_KEYS.groupSingle, `group-${groupId}`],
       });
 
       const message =
@@ -220,13 +260,27 @@ function GroupData({ groupId, user }: { groupId: string; user: UserLoggedIn }) {
 
   const g = group.data;
   const canEdit = g.createdBy === user.id;
+  const canJoin = !g.members.some((m) => m.userId === user.id);
 
   return (
     <div className="flex aspect-video min-w-[480px] flex-col gap-4 rounded bg-neutral-200 p-4 text-xl shadow-lg dark:bg-neutral-800 dark:shadow-none">
-      <h1 className="mb-2 text-4xl font-bold">
-        Group &nbsp;
-        {canEdit ? <em className="text-2xl font-normal">(owned)</em> : null}
-      </h1>
+      <div className="flex justify-between">
+        <h1 className="mb-2 text-4xl font-bold">
+          Group &nbsp;
+          {canEdit ? <em className="text-2xl font-normal">(owned)</em> : null}
+        </h1>
+        {canJoin && (
+          <button
+            className={STYLES.button}
+            disabled={joinGroup.isPending}
+            onClick={() => {
+              joinGroup.mutate(g.groupId);
+            }}
+          >
+            {joinGroup.isPending ? <LoadingSpinner /> : <>Join</>}
+          </button>
+        )}
+      </div>
 
       <div className="flex flex-col gap-4">
         <div className="flex w-full flex-col">
@@ -280,8 +334,6 @@ function GroupData({ groupId, user }: { groupId: string; user: UserLoggedIn }) {
                     {m.joinStatus === "pending" && (
                       <img
                         className="h-6 w-6 dark:invert"
-                        width="24"
-                        height="24"
                         src={pendingIcon}
                         alt="pending"
                       />
@@ -289,8 +341,6 @@ function GroupData({ groupId, user }: { groupId: string; user: UserLoggedIn }) {
                     {m.joinStatus === "banned" && (
                       <img
                         className="h-6 w-6"
-                        width="24"
-                        height="24"
                         src={bannedIcon}
                         alt="banned"
                       />
@@ -298,10 +348,9 @@ function GroupData({ groupId, user }: { groupId: string; user: UserLoggedIn }) {
                     {m.email}
                   </div>
                   {!canEdit || m.userId === user.id ? null : (
-                    <div>
+                    <div className="flex gap-2">
                       {m.joinStatus !== "member" && (
                         <button
-                          className={`${STYLES.button}`}
                           disabled={groupApproveOrBanMember.isPending}
                           onClick={() => {
                             groupApproveOrBanMember.mutate({
@@ -310,12 +359,15 @@ function GroupData({ groupId, user }: { groupId: string; user: UserLoggedIn }) {
                             });
                           }}
                         >
-                          Approve
+                          <img
+                            className="h-6 w-6"
+                            src={checkmarkIcon}
+                            alt="add"
+                          />
                         </button>
                       )}
                       {m.joinStatus !== "banned" && (
                         <button
-                          className={STYLES.buttonDanger}
                           disabled={groupApproveOrBanMember.isPending}
                           onClick={() => {
                             groupApproveOrBanMember.mutate({
@@ -324,7 +376,11 @@ function GroupData({ groupId, user }: { groupId: string; user: UserLoggedIn }) {
                             });
                           }}
                         >
-                          Ban
+                          <img
+                            className="h-6 w-6"
+                            src={bannedIcon}
+                            alt="ban"
+                          />
                         </button>
                       )}
                     </div>

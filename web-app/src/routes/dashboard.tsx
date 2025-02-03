@@ -361,11 +361,6 @@ export function displaySchedule(schedule: RideSchedule | null): string {
   return `every ${schedule.interval} ${schedule.unit}`;
 }
 
-type CreateGroupFormData = {
-  name: string;
-  description?: string;
-};
-
 function CreateGroupForm({
   tokens,
   afterSubmit,

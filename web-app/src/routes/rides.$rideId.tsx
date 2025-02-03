@@ -8,7 +8,7 @@ import { UserLoggedIn } from "../lib/models/user";
 import { displaySchedule } from "./dashboard";
 import { toast } from "react-toastify";
 import { parseRecuring } from "../lib/components/CreateRideForm";
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 
 export const Route = createFileRoute("/rides/$rideId")({
   component: RouteComponent,
@@ -18,7 +18,6 @@ function RouteComponent() {
   const { user } = useUserStore();
   const { rideId } = Route.useParams();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
 
   if (user.type !== "logged-in") {
     navigate({ to: "/" });
@@ -251,7 +250,7 @@ function RideData({ user, rideId }: { user: UserLoggedIn; rideId: string }) {
         <span className="font-semibold">Status: </span>
         <div className="flex justify-between">
           <span className="ml-2 p-1">{r.status}</span>
-          {r.status === "upcoming" ? (
+          {r.status === "upcoming" && canEdit ? (
             <button
               className="font-bold text-red-500"
               onClick={() => {
@@ -292,7 +291,7 @@ function RideData({ user, rideId }: { user: UserLoggedIn; rideId: string }) {
         />
       </div>
 
-      <div className="flex flex-col w-full">
+      <div className="flex w-full flex-col">
         <span className="font-semibold">Participants: </span>
         {r.participants.length > 0 ? (
           r.participants.map((p) => {

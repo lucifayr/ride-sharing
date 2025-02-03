@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"io/fs"
@@ -12,8 +13,11 @@ import (
 	"time"
 
 	embeddings "ride_sharing_api"
+	"ride_sharing_api/app/assert"
 	"ride_sharing_api/app/common"
 	"ride_sharing_api/app/database/migrations"
+	"ride_sharing_api/app/rest"
+	"ride_sharing_api/app/sqlc"
 	utils "ride_sharing_api/app/utils"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -54,6 +58,47 @@ var commands = Command{
 			},
 			exec: func(cmd Command, _args []string) {
 				unfinishedCmd(cmd)
+			},
+		},
+		"dev": {
+			subcommands: map[string]Command{
+				"make-account": {
+					exec: func(_cmd Command, args []string) {
+						id := parseCmdFlag(args, "--id", "-i")
+						email := parseCmdFlag(args, "--email", "-e")
+						name := parseCmdFlag(args, "--name", "-n")
+
+						dbFile := utils.GetEnvRequired(common.ENV_DB_NAME)
+						db, err := utils.InitDb(dbFile)
+						assert.Nil(err)
+
+						tx, err := db.Begin()
+						assert.Nil(err)
+
+						queries := sqlc.New(tx)
+						_, err = queries.UsersCreate(context.Background(), sqlc.UsersCreateParams{ID: id, Name: name, Email: email, Provider: "google"})
+						assert.Nil(err)
+
+						tokens := rest.GenAuthTokens(id, email)
+
+						params := sqlc.UsersSetTokensParams{ID: id, AccessToken: utils.SqlNullStr(tokens.AccessToken), RefreshToken: utils.SqlNullStr(tokens.RefreshToken)}
+						err = queries.UsersSetTokens(context.Background(), params)
+						assert.Nil(err)
+
+						err = tx.Commit()
+						assert.Nil(err)
+
+						log.Printf(`
+id: "%s",
+name: "%s",
+email: "%s",
+tokens: {
+	accessToken: "%s",
+	refreshToken: "%s",
+}
+`, id, name, email, tokens.AccessToken, tokens.RefreshToken)
+					},
+				},
 			},
 		},
 	},
@@ -125,22 +170,28 @@ func createMigration(flags map[string]any) {
 }
 
 func parseCreateMigrationFlags(args []string) map[string]any {
-	idx := utils.IdxOf(args, func(arg string) bool {
-		return arg == "--name" || arg == "-n"
-	})
-
-	if idx == -1 {
-		log.Fatalln("Missing required parameter	`--name`. Provided it with `--name <value>`.")
-	}
-
-	name, ok := utils.SliceGet(args, idx+1)
-	if !ok {
-		log.Fatalln("Missing value for required parameter `--name`. Provided it with `--name <value>`.")
-	}
+	name := parseCmdFlag(args, "--name", "-n")
 
 	return map[string]any{
 		"name": name,
 	}
+}
+
+func parseCmdFlag(args []string, long string, short string) string {
+	idx := utils.IdxOf(args, func(arg string) bool {
+		return arg == long || arg == short
+	})
+
+	if idx == -1 {
+		log.Fatalf("Missing required parameter	`%s`. Provided it with `%s <value>`.\n", long, long)
+	}
+
+	value, ok := utils.SliceGet(args, idx+1)
+	if !ok {
+		log.Fatalf("Missing required parameter	`%s`. Provided it with `%s <value>`.\n", long, long)
+	}
+
+	return *value
 }
 
 func setupDb() *sql.DB {

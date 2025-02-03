@@ -90,7 +90,7 @@ func oauthCallbackGoogle(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		tokens := genAuthTokens(user.ID, user.Email)
+		tokens := GenAuthTokens(user.ID, user.Email)
 
 		args := sqlc.UsersSetTokensParams{ID: user.ID, AccessToken: sql.NullString{String: tokens.AccessToken}, RefreshToken: sql.NullString{String: tokens.RefreshToken}}
 		err = state.queries.UsersSetTokens(r.Context(), args)
@@ -121,7 +121,7 @@ func oauthCallbackGoogle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokens := genAuthTokens(user.ID, user.Email)
+	tokens := GenAuthTokens(user.ID, user.Email)
 
 	args := sqlc.UsersSetTokensParams{ID: user.ID, AccessToken: utils.SqlNullStr(tokens.AccessToken), RefreshToken: utils.SqlNullStr(tokens.RefreshToken)}
 	err = state.queries.UsersSetTokens(r.Context(), args)

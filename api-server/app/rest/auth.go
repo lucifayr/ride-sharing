@@ -75,7 +75,7 @@ func refreshAuthTokens(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokens := genAuthTokens(user.ID, user.Email)
+	tokens := GenAuthTokens(user.ID, user.Email)
 	bytes, err := json.Marshal(tokens)
 	assert.True(err == nil, "Failed to serialize authentication tokens.", tokens, "error:", func() any { return err })
 
@@ -90,7 +90,7 @@ func refreshAuthTokens(w http.ResponseWriter, r *http.Request) {
 	w.Write(bytes)
 }
 
-func genAuthTokens(userId string, email string) authTokens {
+func GenAuthTokens(userId string, email string) authTokens {
 	return authTokens{
 		AccessToken:  encodeAccessToken(userId, email),
 		RefreshToken: genRandBase64(512),
