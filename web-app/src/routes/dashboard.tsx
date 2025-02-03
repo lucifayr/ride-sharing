@@ -33,8 +33,8 @@ function Dashboard() {
   }
 
   return (
-    <div className="flex gap-8">
-      <div className="flex w-full flex-col gap-2">
+    <div className="flex h-full gap-8">
+      <div className="flex h-full w-full flex-col gap-2">
         <div className="flex min-h-32 items-center justify-center gap-2">
           <button
             className={`text-2xl ${STYLES.button}`}
@@ -53,10 +53,14 @@ function Dashboard() {
             Create a Group
           </button>
         </div>
-        <div className="mb-8 flex w-full justify-center">
-          <GroupList tokens={user.tokens} />
+        <div className="flex h-full gap-8">
+          <div className="flex-grow p-8">
+            <RideList tokens={user.tokens} />
+          </div>
+          <div className="h-full min-w-80 border-l-2 border-solid border-neutral-300 p-8 dark:border-neutral-600">
+            <GroupList tokens={user.tokens} />
+          </div>
         </div>
-        <RideList tokens={user.tokens} />
         <dialog
           className="bg-transparent"
           ref={dialogRefRide}
@@ -122,13 +126,16 @@ function GroupList({ tokens }: { tokens: AuthTokens }) {
   }
 
   return (
-    <div>
+    <div className="flex flex-col gap-8">
       {groups.map((group, idx) => {
         return (
-          <div key={idx}>
-            <span className="text-2xl">Group: {group.name}</span>
+          <div
+            key={idx}
+            className="flex flex-col gap-2 text-wrap"
+          >
+            <span className="text-4xl">{group.name}</span>
             {group.description ? (
-              <em className="text-lg">&nbsp;{group.description}</em>
+              <em className="text-lg">{group.description}</em>
             ) : null}
           </div>
         );
