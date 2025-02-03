@@ -1,6 +1,5 @@
 import * as React from "react";
-import pendingIcon from "../assets/pending.svg";
-import bannedIcon from "../assets/banned.svg";
+import banIcon from "../assets/ban.svg";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Group } from "../lib/models/models";
 import { UserLoggedIn } from "../lib/models/user";
@@ -330,23 +329,11 @@ function GroupData({ groupId, user }: { groupId: string; user: UserLoggedIn }) {
                   key={idx}
                   className="flex w-full justify-between"
                 >
-                  <div className="ml-2 flex items-center gap-2 p-1">
-                    {m.joinStatus === "pending" && (
-                      <img
-                        className="h-6 w-6 dark:invert"
-                        src={pendingIcon}
-                        alt="pending"
-                      />
-                    )}
-                    {m.joinStatus === "banned" && (
-                      <img
-                        className="h-6 w-6"
-                        src={bannedIcon}
-                        alt="banned"
-                      />
-                    )}
+                  <span
+                    className={`ml-2 p-1 ${m.joinStatus === "banned" ? "text-red-500 line-through" : ""} ${m.joinStatus === "pending" ? "text-neutral-300 dark:text-neutral-600" : ""}`}
+                  >
                     {m.email}
-                  </div>
+                  </span>
                   {!canEdit || m.userId === user.id ? null : (
                     <div className="flex gap-2">
                       {m.joinStatus !== "member" && (
@@ -378,7 +365,7 @@ function GroupData({ groupId, user }: { groupId: string; user: UserLoggedIn }) {
                         >
                           <img
                             className="h-6 w-6"
-                            src={bannedIcon}
+                            src={banIcon}
                             alt="ban"
                           />
                         </button>
