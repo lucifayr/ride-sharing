@@ -12,8 +12,7 @@ LIMIT
 
 
 SELECT
-    user_id,
-    ride_id
+    *
 FROM
     ride_participants
 LIMIT

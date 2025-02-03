@@ -43,8 +43,8 @@ type RideGroup struct {
 }
 
 type RideParticipant struct {
-	UserID string `json:"userId"`
-	RideID int64  `json:"rideId"`
+	UserID      string `json:"userId"`
+	RideEventID string `json:"rideEventId"`
 }
 
 type RideSchedule struct {

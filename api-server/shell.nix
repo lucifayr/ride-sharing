@@ -9,12 +9,12 @@ pkgs.mkShell {
     nodePackages.sql-formatter
   ];
 
-  export RS_DB_NAME=rides.db
-  export RS_HOST_ADDR = 127.0.0.1:8000
-  export RS_WEB_APP_URL = http://127.0.0.1:5173
-  export RS_SECRET_AUTH_TOKEN = 03**CsL@pfFmtt5K4LE*SVYXPseFZ^FO
-  export RS_NO_TLS = true
-  export RS_GOOGLE_REDIRECT_URL = http://127.0.0.1:8000/auth/google/callback
-  export RS_GOOGLE_CLIENT_ID = 750385423567-8vu2cst8njm4d6ple8e424ltpd9dh9t2.apps.googleusercontent.com
-  export RS_GOOGLE_CLIENT_SECRET = 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;
+  RS_DB_NAME = "ides.db";
+  RS_HOST_ADDR = "127.0.0.1:8000";
+  RS_WEB_APP_URL = "http://127.0.0.1:5173";
+  RS_SECRET_AUTH_TOKEN = "03**CsL@pfFmtt5K4LE*SVYXPseFZ^FO";
+  RS_NO_TLS = "true";
+  RS_GOOGLE_REDIRECT_URL = "http://127.0.0.1:8000/auth/google/callback";
+  RS_GOOGLE_CLIENT_ID = "750385423567-8vu2cst8njm4d6ple8e424ltpd9dh9t2.apps.googleusercontent.com";
+  RS_GOOGLE_CLIENT_SECRET = "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";
 }

@@ -99,6 +99,17 @@ WHERE
     );
 
 
+-- name: RidesGetParticipants :many
+SELECT
+    u.id,
+    u.email
+FROM
+    ride_participants rp
+    INNER JOIN users u ON rp.user_id = u.id
+WHERE
+    rp.ride_event_id = ?;
+
+
 -- name: RidesGetEvent :one
 SELECT
     r.id AS ride_id,
@@ -194,3 +205,19 @@ LIMIT
     50
 OFFSET
     ?;
+
+
+-- name: RidesJoinEvent :exec
+INSERT INTO
+    ride_participants (ride_event_id, user_id)
+VALUES
+    (?, ?);
+
+
+-- name: RidesCountEventParticipants :one
+SELECT
+    COUNT(user_id)
+FROM
+    ride_participants
+WHERE
+    ride_event_id = ?;

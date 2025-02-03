@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { LoadingSpinner } from "../lib/components/Spinner";
 import { useUserStore } from "../lib/stores";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { isRestErr, QUERY_KEYS, toastRestErr } from "../lib/utils";
+import { isRestErr, QUERY_KEYS, STYLES, toastRestErr } from "../lib/utils";
 import { RideEvent, RideSchedule } from "../lib/models/ride";
 import { UserLoggedIn } from "../lib/models/user";
 import { displaySchedule } from "./dashboard";
@@ -121,6 +121,41 @@ function RideData({ user, rideId }: { user: UserLoggedIn; rideId: string }) {
     },
   });
 
+  const joinRide = useMutation({
+    mutationKey: ["join-ride"],
+    onError: (err) => {
+      console.error(err);
+    },
+    mutationFn: async (rideEventId: string) => {
+      const res = await fetch(`${import.meta.env.VITE_API_URI}/rides/join`, {
+        method: "POST",
+        headers: {
+          Authorization: user.tokens.accessToken,
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          rideEventId,
+        }),
+      });
+
+      if (res.status === 401) {
+        setUser({ type: "logged-out" });
+      }
+
+      if (!res.ok) {
+        const data = await res.json();
+        if (isRestErr(data)) {
+          toastRestErr(data);
+          return;
+        }
+      }
+
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.rideSingle] });
+      toast("Joined ride", { type: "success" });
+    },
+  });
+
   const cancelRide = useMutation({
     mutationKey: ["cancel-ride"],
     onError: (err) => {
@@ -171,13 +206,27 @@ function RideData({ user, rideId }: { user: UserLoggedIn; rideId: string }) {
 
   const r = ride.data;
   const canEdit = r.createdBy === user.id;
+  const canJoin = !r.participants.some((p) => p.userId === user.id);
 
   return (
     <div className="flex aspect-video min-w-[320px] flex-col gap-4 rounded bg-neutral-200 p-4 text-xl shadow-lg dark:bg-neutral-800 dark:shadow-none">
-      <h1 className="mb-2 text-4xl font-bold">
-        Ride &nbsp;
-        {canEdit ? <em className="text-2xl font-normal">(owned)</em> : null}
-      </h1>
+      <div className="flex justify-between">
+        <h1 className="mb-2 text-4xl font-bold">
+          Ride &nbsp;
+          {canEdit ? <em className="text-2xl font-normal">(owned)</em> : null}
+        </h1>
+        {canJoin && (
+          <button
+            className={STYLES.button}
+            disabled={joinRide.isPending}
+            onClick={() => {
+              joinRide.mutate(r.rideEventId);
+            }}
+          >
+            {joinRide.isPending ? <LoadingSpinner /> : <>Join</>}
+          </button>
+        )}
+      </div>
 
       <div className="flex">
         <div className="flex w-1/2 flex-col">
@@ -240,6 +289,17 @@ function RideData({ user, rideId }: { user: UserLoggedIn; rideId: string }) {
             updateSchedule.mutate({ schedule, rideEventId: r.rideEventId });
           }}
         />
+      </div>
+
+      <div className="flex flex-col">
+        <span className="font-semibold">Participants: </span>
+        {r.participants.length > 0 ? (
+          r.participants.map((p) => {
+            return <span className="ml-2 p-1">{p.email}</span>;
+          })
+        ) : (
+          <span className="ml-2 p-1">---</span>
+        )}
       </div>
     </div>
   );
