@@ -12,6 +12,7 @@ import (
 	"ride_sharing_api/app/assert"
 	"ride_sharing_api/app/sqlc"
 	"ride_sharing_api/app/utils"
+	"slices"
 	"strconv"
 	"time"
 )
@@ -225,11 +226,20 @@ func joinRide(w http.ResponseWriter, r *http.Request) {
 	}
 	assert.Nil(err)
 
-	participants, err := queriesTx.RidesCountEventParticipants(r.Context(), event.RideEventID)
+	participants, err := queriesTx.RidesGetParticipants(r.Context(), event.RideEventID)
 	assert.Nil(err)
 
-	if participants >= event.TransportLimit {
+	if int64(len(participants)) >= event.TransportLimit {
 		httpWriteErr(w, http.StatusConflict, "Ride is already full.")
+		return
+	}
+
+	alreadyJoined := slices.ContainsFunc(participants, func(p sqlc.RidesGetParticipantsRow) bool {
+		return p.ID == user.ID
+	})
+
+	if alreadyJoined {
+		httpWriteErr(w, http.StatusConflict, "Already a member of this ride.")
 		return
 	}
 
