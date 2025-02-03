@@ -19,6 +19,15 @@ type SearchFilters = {
   owner?: string;
   participants?: string[];
 };
+
+/**
+ * Parses a ride search string by finding any search filters contained in it.
+ * Search filters are of the format `:{filter-name} {filter-value}`, where
+ * `{filter-name}` is a value such as `from`, `to`, or `driver` and
+ * `{filter-value}` is the matching value for that filter.
+ *
+ * @param rawSearchString The search string to parse.
+ */
 export function parseSearchString(rawSearchString: string): SearchFilters {
   let filters: SearchFilters = {};
 
