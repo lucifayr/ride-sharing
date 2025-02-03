@@ -1,9 +1,10 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { CreateRideForm } from "../lib/components/CreateRideForm";
 import {
   createFileRoute,
   Link,
   ReactNode,
+  SearchFilter,
   useNavigate,
 } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -16,6 +17,7 @@ import { AuthTokens } from "../lib/models/user";
 import { RideEvent, RideSchedule } from "../lib/models/ride";
 import { Group } from "../lib/models/models";
 import { useForm } from "@tanstack/react-form";
+import { parseSearchString, SearchFilters } from "../lib/search";
 
 export const Route = createFileRoute("/dashboard")({
   component: Dashboard,
@@ -147,7 +149,10 @@ function GroupList({ tokens }: { tokens: AuthTokens }) {
 }
 
 function RideList({ tokens }: { tokens: AuthTokens }) {
+  const inputRefRideSearch = useRef<HTMLInputElement>(null);
   const { setUser } = useUserStore();
+
+  const [filters, setFilters] = useState<SearchFilters>({});
 
   const columns: {
     [K in keyof RideEvent]?: {
@@ -245,31 +250,53 @@ function RideList({ tokens }: { tokens: AuthTokens }) {
   }
 
   return (
-    <table className="relative h-fit w-full max-w-full table-auto overflow-x-auto text-lg">
-      <thead className="uppercase">
-        <RideListRow
-          isHeading={true}
-          values={Object.values(columns).map(({ label }) => {
-            return label;
-          })}
-        />
-      </thead>
-      <tbody>
-        {rides.map((ride, idx) => {
-          return (
-            <RideListRow
-              key={idx}
-              isLast={idx === rides.length - 1}
-              isDoneOrCanceled={ride.status !== "upcoming"}
-              values={Object.entries(columns).map(([key, { mapField }]) => {
-                return (mapField as any)(ride[key as keyof RideEvent], ride);
-              })}
-              event={ride}
-            />
+    <div className="flex flex-col gap-4">
+      <input
+        className="w-full border-b border-neutral-200 bg-transparent p-1 text-xl focus:border-cyan-500 focus:outline-none disabled:border-none dark:border-neutral-500"
+        placeholder=":from My cool city"
+        ref={inputRefRideSearch}
+        onKeyDown={(e) => {
+          if (e.key !== "Enter" || !inputRefRideSearch.current) {
+            return;
+          }
+
+          const newFilters = parseSearchString(
+            inputRefRideSearch.current.value,
           );
-        })}
-      </tbody>
-    </table>
+          setFilters(newFilters);
+        }}
+      />
+      <table className="relative h-fit w-full max-w-full table-auto overflow-x-auto text-lg">
+        <thead className="uppercase">
+          <RideListRow
+            isHeading={true}
+            values={Object.values(columns).map(({ label }) => {
+              return label;
+            })}
+          />
+        </thead>
+        <tbody>
+          {rides
+            .filter((ride) => rideMatchesFilters(ride, filters))
+            .map((ride, idx) => {
+              return (
+                <RideListRow
+                  key={idx}
+                  isLast={idx === rides.length - 1}
+                  isDoneOrCanceled={ride.status !== "upcoming"}
+                  values={Object.entries(columns).map(([key, { mapField }]) => {
+                    return (mapField as any)(
+                      ride[key as keyof RideEvent],
+                      ride,
+                    );
+                  })}
+                  event={ride}
+                />
+              );
+            })}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -501,4 +528,52 @@ function CreateGroupForm({
       </div>
     </div>
   );
+}
+
+function rideMatchesFilters(ride: RideEvent, filters: SearchFilters): boolean {
+  if (filters.source !== undefined && ride.locationFrom !== filters.source) {
+    return false;
+  }
+
+  if (
+    filters.destination !== undefined &&
+    ride.locationTo !== filters.destination
+  ) {
+    return false;
+  }
+
+  if (filters.status !== undefined && ride.status !== filters.status) {
+    return false;
+  }
+
+  if (filters.owner !== undefined && ride.createdByEmail !== filters.owner) {
+    return false;
+  }
+
+  if (filters.driver !== undefined && ride.driverEmail !== filters.driver) {
+    return false;
+  }
+
+  const rideDate = new Date(Date.parse(ride.tackingPlaceAt));
+  if (filters.dateAfter !== undefined && rideDate < filters.dateAfter) {
+    return false;
+  }
+
+  if (filters.dateBefore !== undefined && rideDate > filters.dateBefore) {
+    return false;
+  }
+
+  if (
+    filters.participants !== undefined &&
+    !filters.participants.every((participant) => {
+      const hasParticipant = ride.participants.some(
+        (rideParticipant) => rideParticipant.email === participant,
+      );
+      return hasParticipant;
+    })
+  ) {
+    return false;
+  }
+
+  return true;
 }

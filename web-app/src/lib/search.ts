@@ -1,4 +1,5 @@
 export const SEARCH_FILTERS = {
+  status: "status",
   source: "from",
   destination: "to",
   dateBefore: "before",
@@ -10,7 +11,8 @@ export const SEARCH_FILTERS = {
   [K in keyof SearchFilters]: any;
 };
 
-type SearchFilters = {
+export type SearchFilters = {
+  status?: string;
   source?: string;
   destination?: string;
   dateBefore?: Date;
@@ -89,6 +91,7 @@ function parseFilterValue<K extends keyof SearchFilters>(
   value: string,
 ): SearchFilters[K] {
   switch (filter) {
+    case "status":
     case "source":
     case "destination":
     case "owner":
