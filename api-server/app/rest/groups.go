@@ -10,6 +10,7 @@ import (
 	"ride_sharing_api/app/assert"
 	"ride_sharing_api/app/sqlc"
 	"ride_sharing_api/app/utils"
+	"slices"
 	"strconv"
 )
 
@@ -18,13 +19,23 @@ func groupHandlers(h *http.ServeMux) {
 	h.HandleFunc("POST /groups/update", handle(updateGroup).with(bearerAuth(false)).build())
 	h.HandleFunc("GET /groups/many", handle(getManyGroups).with(bearerAuth(false)).build())
 	h.HandleFunc("GET /groups/by-id/{id}", handle(getGroupById).with(bearerAuth(false)).build())
+	h.HandleFunc("POST /groups/by-id/{id}/members/join", handle(groupMemberJoin).with(bearerAuth(false)).build())
+	h.HandleFunc("POST /groups/by-id/{id}/members/ban", handle(groupMemberOwnerSetStatus("banned")).with(bearerAuth(false)).build())
+	h.HandleFunc("POST /groups/by-id/{id}/members/approve", handle(groupMemberOwnerSetStatus("member")).with(bearerAuth(false)).build())
 }
 
 type GroupData struct {
-	GroupId     string  `json:"groupId"`
-	Name        string  `json:"name"`
-	Description *string `json:"description"`
-	CreatedBy   string  `json:"createdBy"`
+	GroupId     string        `json:"groupId"`
+	Name        string        `json:"name"`
+	Description *string       `json:"description"`
+	CreatedBy   string        `json:"createdBy"`
+	Members     []GroupMember `json:"members"`
+}
+
+type GroupMember struct {
+	UserId     string `json:"userId"`
+	Email      string `json:"email"`
+	JoinStatus string `json:"joinStatus"`
 }
 
 type createGroupParams struct {
@@ -36,6 +47,10 @@ type updateGroupParams struct {
 	GroupId     *string `json:"groupId" validate:"required"`
 	Name        *string `json:"name"`
 	Description *string `json:"description"`
+}
+
+type groupMemberSetStatusParams struct {
+	UserId *string `json:"userId" validate:"required"`
 }
 
 func createGroup(w http.ResponseWriter, r *http.Request) {
@@ -83,11 +98,24 @@ func createGroup(w http.ResponseWriter, r *http.Request) {
 		dataDesc = &group.Description.String
 	}
 
+	members, err := state.queries.GroupsMembersGet(r.Context(), group.ID)
+	assert.Nil(err)
+
+	membersData := make([]GroupMember, len(members))
+	for idx, member := range members {
+		membersData[idx] = GroupMember{
+			UserId:     member.UserID,
+			Email:      member.Email,
+			JoinStatus: member.JoinStatus,
+		}
+	}
+
 	groupData := GroupData{
 		GroupId:     group.ID,
 		Name:        group.Name,
 		Description: dataDesc,
 		CreatedBy:   group.CreatedBy,
+		Members:     membersData,
 	}
 
 	resp, err := json.Marshal(groupData)
@@ -171,11 +199,24 @@ func getGroupById(w http.ResponseWriter, r *http.Request) {
 		dataDesc = &group.Description.String
 	}
 
+	members, err := state.queries.GroupsMembersGet(r.Context(), group.ID)
+	assert.Nil(err)
+
+	membersData := make([]GroupMember, len(members))
+	for idx, member := range members {
+		membersData[idx] = GroupMember{
+			UserId:     member.UserID,
+			Email:      member.Email,
+			JoinStatus: member.JoinStatus,
+		}
+	}
+
 	groupData := GroupData{
 		GroupId:     group.ID,
 		Name:        group.Name,
 		Description: dataDesc,
 		CreatedBy:   group.CreatedBy,
+		Members:     membersData,
 	}
 
 	var resp []byte
@@ -207,11 +248,24 @@ func getManyGroups(w http.ResponseWriter, r *http.Request) {
 			desc = &row.Description.String
 		}
 
+		members, err := state.queries.GroupsMembersGet(r.Context(), row.ID)
+		assert.Nil(err)
+
+		membersData := make([]GroupMember, len(members))
+		for idx, member := range members {
+			membersData[idx] = GroupMember{
+				UserId:     member.UserID,
+				Email:      member.Email,
+				JoinStatus: member.JoinStatus,
+			}
+		}
+
 		groups[idx] = GroupData{
 			GroupId:     row.ID,
 			Name:        row.Name,
 			Description: desc,
 			CreatedBy:   row.CreatedBy,
+			Members:     membersData,
 		}
 	}
 
@@ -225,4 +279,88 @@ func getManyGroups(w http.ResponseWriter, r *http.Request) {
 	assert.Nil(err, "Failed to serialize groups.")
 	w.WriteHeader(200)
 	w.Write(resp)
+}
+
+func groupMemberJoin(w http.ResponseWriter, r *http.Request) {
+	user := getMiddlewareData[sqlc.User](r, "user")
+
+	id := r.PathValue("id")
+	if id == "" {
+		httpWriteErr(w, http.StatusBadRequest, "Must provide 'id' path parameter.")
+		return
+	}
+
+	members, err := state.queries.GroupsMembersGet(r.Context(), id)
+	assert.Nil(err)
+
+	alreadyMember := slices.ContainsFunc(members, func(m sqlc.GroupsMembersGetRow) bool {
+		return m.UserID == user.ID
+	})
+
+	if alreadyMember {
+		httpWriteErr(w, http.StatusConflict, "Already a member of this group.")
+		return
+	}
+
+	argsJoin := sqlc.GroupsMembersJoinParams{
+		GroupID: id,
+		UserID:  user.ID,
+	}
+	err = state.queries.GroupsMembersJoin(r.Context(), argsJoin)
+	assert.Nil(err)
+}
+
+func groupMemberOwnerSetStatus(status string) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user := getMiddlewareData[sqlc.User](r, "user")
+
+		id := r.PathValue("id")
+		if id == "" {
+			httpWriteErr(w, http.StatusBadRequest, "Must provide 'id' path parameter.")
+			return
+		}
+
+		data, err := io.ReadAll(r.Body)
+		if err != nil {
+			log.Println("Error: Invalid request body.", "error:", err)
+			httpWriteErr(w, http.StatusBadRequest, "Invalid request body.")
+			return
+		}
+
+		var setStatusParams groupMemberSetStatusParams
+		err = json.Unmarshal(data, &setStatusParams)
+		if err != nil {
+			log.Println("Error: Invalid JSON in request body.", "error:", err)
+			httpWriteErr(w, http.StatusBadRequest, "Invalid JSON in request body.", err.Error())
+			return
+		}
+
+		err = utils.Validate.Struct(setStatusParams)
+		if err != nil {
+			log.Println("Error: Invalid JSON in request body.", "error:", err)
+			httpWriteErr(w, http.StatusBadRequest, "Missing/Invalid fields in request body.", err.Error())
+			return
+		}
+
+		if user.ID == *setStatusParams.UserId {
+			httpWriteErr(w, http.StatusForbidden, "Not allowed to change your own status.")
+			return
+		}
+
+		group, err := state.queries.GroupsGetById(r.Context(), id)
+		assert.Nil(err)
+
+		if user.ID != group.CreatedBy {
+			httpWriteErr(w, http.StatusForbidden, "You do not have the permission to change the status of a group member.")
+			return
+		}
+
+		argsSetStatus := sqlc.GroupsMembersSetStatusParams{
+			JoinStatus: status,
+			GroupID:    id,
+			UserID:     *setStatusParams.UserId,
+		}
+		err = state.queries.GroupsMembersSetStatus(r.Context(), argsSetStatus)
+		assert.Nil(err) // TODO: handle member not in pending state
+	}
 }

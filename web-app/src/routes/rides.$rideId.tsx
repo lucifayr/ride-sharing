@@ -292,7 +292,7 @@ function RideData({ user, rideId }: { user: UserLoggedIn; rideId: string }) {
         />
       </div>
 
-      <div className="flex flex-col">
+      <div className="flex flex-col w-full">
         <span className="font-semibold">Participants: </span>
         {r.participants.length > 0 ? (
           r.participants.map((p) => {

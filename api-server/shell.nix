@@ -9,7 +9,7 @@ pkgs.mkShell {
     nodePackages.sql-formatter
   ];
 
-  RS_DB_NAME = "ides.db";
+  RS_DB_NAME = "rides.db";
   RS_HOST_ADDR = "127.0.0.1:8000";
   RS_WEB_APP_URL = "http://127.0.0.1:5173";
   RS_SECRET_AUTH_TOKEN = "03**CsL@pfFmtt5K4LE*SVYXPseFZ^FO";

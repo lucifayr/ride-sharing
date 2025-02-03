@@ -119,6 +119,100 @@ func (q *Queries) GroupsGetMany(ctx context.Context, offset int64) ([]GroupsGetM
 	return items, nil
 }
 
+const groupsMembersGet = `-- name: GroupsMembersGet :many
+SELECT
+    group_id,
+    user_id,
+    u.email,
+    join_status
+FROM
+    ride_group_members
+    INNER JOIN users u ON u.id = user_id
+WHERE
+    group_id = ?
+ORDER BY
+    (
+        SELECT
+            gso.ordering
+        FROM
+            ride_group_members_join_status_ordering gso
+        WHERE
+            gso.status = join_status
+    )
+`
+
+type GroupsMembersGetRow struct {
+	GroupID    string `json:"groupId"`
+	UserID     string `json:"userId"`
+	Email      string `json:"email"`
+	JoinStatus string `json:"joinStatus"`
+}
+
+func (q *Queries) GroupsMembersGet(ctx context.Context, groupID string) ([]GroupsMembersGetRow, error) {
+	rows, err := q.db.QueryContext(ctx, groupsMembersGet, groupID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GroupsMembersGetRow
+	for rows.Next() {
+		var i GroupsMembersGetRow
+		if err := rows.Scan(
+			&i.GroupID,
+			&i.UserID,
+			&i.Email,
+			&i.JoinStatus,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const groupsMembersJoin = `-- name: GroupsMembersJoin :exec
+INSERT INTO
+    ride_group_members (group_id, user_id)
+VALUES
+    (?, ?)
+`
+
+type GroupsMembersJoinParams struct {
+	GroupID string `json:"groupId"`
+	UserID  string `json:"userId"`
+}
+
+func (q *Queries) GroupsMembersJoin(ctx context.Context, arg GroupsMembersJoinParams) error {
+	_, err := q.db.ExecContext(ctx, groupsMembersJoin, arg.GroupID, arg.UserID)
+	return err
+}
+
+const groupsMembersSetStatus = `-- name: GroupsMembersSetStatus :exec
+UPDATE ride_group_members
+SET
+    join_status = ?
+WHERE
+    group_id = ?
+    AND user_id = ?
+`
+
+type GroupsMembersSetStatusParams struct {
+	JoinStatus string `json:"joinStatus"`
+	GroupID    string `json:"groupId"`
+	UserID     string `json:"userId"`
+}
+
+func (q *Queries) GroupsMembersSetStatus(ctx context.Context, arg GroupsMembersSetStatusParams) error {
+	_, err := q.db.ExecContext(ctx, groupsMembersSetStatus, arg.JoinStatus, arg.GroupID, arg.UserID)
+	return err
+}
+
 const groupsUpdateDescription = `-- name: GroupsUpdateDescription :exec
 UPDATE ride_groups
 SET

@@ -22,7 +22,14 @@ export type Group = {
   groupId: string;
   name: string;
   description?: string;
-  createdB: string; // user id
+  createdBy: string; // user id
+  members: GroupMemeber[];
+};
+
+export type GroupMemeber = {
+  userId: string;
+  email: string;
+  joinStatus: string;
 };
 
 export type Schedule = {

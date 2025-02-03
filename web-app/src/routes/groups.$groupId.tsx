@@ -1,10 +1,12 @@
 import * as React from "react";
+import pendingIcon from "../assets/pending.svg";
+import bannedIcon from "../assets/banned.svg";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Group } from "../lib/models/models";
 import { UserLoggedIn } from "../lib/models/user";
 import { useUserStore } from "../lib/stores";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { isRestErr, QUERY_KEYS, toastRestErr } from "../lib/utils";
+import { isRestErr, QUERY_KEYS, STYLES, toastRestErr } from "../lib/utils";
 import { LoadingSpinner } from "../lib/components/Spinner";
 import { toast } from "react-toastify";
 
@@ -153,6 +155,56 @@ function GroupData({ groupId, user }: { groupId: string; user: UserLoggedIn }) {
     },
   });
 
+  const groupApproveOrBanMember = useMutation({
+    mutationKey: ["group-member-approve-or-ban"],
+    onError: (err) => {
+      console.error(err);
+    },
+    mutationFn: async ({
+      userId,
+      action,
+    }: {
+      userId: string;
+      action: "approve" | "ban";
+    }) => {
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URI}/groups/by-id/members/${action}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: user.tokens.accessToken,
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            userId,
+          }),
+        },
+      );
+
+      if (res.status === 401) {
+        setUser({ type: "logged-out" });
+      }
+
+      if (!res.ok) {
+        const data = await res.json();
+        if (isRestErr(data)) {
+          toastRestErr(data);
+          return;
+        }
+      }
+
+      queryClient.invalidateQueries({
+        queryKey: [QUERY_KEYS.groupSingle, QUERY_KEYS.groupItems],
+      });
+
+      const message =
+        action === "approve"
+          ? "Added user to group."
+          : "Banned user from group.";
+      toast(message, { type: "success" });
+    },
+  });
+
   if (isPending) {
     return <LoadingSpinner content={<span>Getting group...</span>} />;
   }
@@ -170,7 +222,7 @@ function GroupData({ groupId, user }: { groupId: string; user: UserLoggedIn }) {
   const canEdit = g.createdBy === user.id;
 
   return (
-    <div className="flex aspect-video min-w-[320px] flex-col gap-4 rounded bg-neutral-200 p-4 text-xl shadow-lg dark:bg-neutral-800 dark:shadow-none">
+    <div className="flex aspect-video min-w-[480px] flex-col gap-4 rounded bg-neutral-200 p-4 text-xl shadow-lg dark:bg-neutral-800 dark:shadow-none">
       <h1 className="mb-2 text-4xl font-bold">
         Group &nbsp;
         {canEdit ? <em className="text-2xl font-normal">(owned)</em> : null}
@@ -213,6 +265,76 @@ function GroupData({ groupId, user }: { groupId: string; user: UserLoggedIn }) {
               }
             }}
           />
+        </div>
+
+        <div className="flex w-full flex-col">
+          <span className="font-semibold">Members: </span>
+          {g.members.length > 0 ? (
+            g.members.map((m, idx) => {
+              return (
+                <div
+                  key={idx}
+                  className="flex w-full justify-between"
+                >
+                  <div className="ml-2 flex items-center gap-2 p-1">
+                    {m.joinStatus === "pending" && (
+                      <img
+                        className="h-6 w-6 dark:invert"
+                        width="24"
+                        height="24"
+                        src={pendingIcon}
+                        alt="pending"
+                      />
+                    )}
+                    {m.joinStatus === "banned" && (
+                      <img
+                        className="h-6 w-6"
+                        width="24"
+                        height="24"
+                        src={bannedIcon}
+                        alt="banned"
+                      />
+                    )}
+                    {m.email}
+                  </div>
+                  {!canEdit || m.userId === user.id ? null : (
+                    <div>
+                      {m.joinStatus !== "member" && (
+                        <button
+                          className={`${STYLES.button}`}
+                          disabled={groupApproveOrBanMember.isPending}
+                          onClick={() => {
+                            groupApproveOrBanMember.mutate({
+                              userId: m.userId,
+                              action: "approve",
+                            });
+                          }}
+                        >
+                          Approve
+                        </button>
+                      )}
+                      {m.joinStatus !== "banned" && (
+                        <button
+                          className={STYLES.buttonDanger}
+                          disabled={groupApproveOrBanMember.isPending}
+                          onClick={() => {
+                            groupApproveOrBanMember.mutate({
+                              userId: m.userId,
+                              action: "ban",
+                            });
+                          }}
+                        >
+                          Ban
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          ) : (
+            <span className="ml-2 p-1">---</span>
+          )}
         </div>
       </div>
     </div>

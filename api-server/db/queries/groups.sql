@@ -50,3 +50,41 @@ SET
     description = ?
 WHERE
     id = ?;
+
+
+-- name: GroupsMembersGet :many
+SELECT
+    group_id,
+    user_id,
+    u.email,
+    join_status
+FROM
+    ride_group_members
+    INNER JOIN users u ON u.id = user_id
+WHERE
+    group_id = ?
+ORDER BY
+    (
+        SELECT
+            gso.ordering
+        FROM
+            ride_group_members_join_status_ordering gso
+        WHERE
+            gso.status = join_status
+    );
+
+
+-- name: GroupsMembersJoin :exec
+INSERT INTO
+    ride_group_members (group_id, user_id)
+VALUES
+    (?, ?);
+
+
+-- name: GroupsMembersSetStatus :exec
+UPDATE ride_group_members
+SET
+    join_status = ?
+WHERE
+    group_id = ?
+    AND user_id = ?;
