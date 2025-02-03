@@ -17,22 +17,20 @@ describe("parseSearchString", () => {
       source: "Graz",
     });
 
-    const datetime = new Date();
-    datetime.setUTCHours(12, 30, 0, 0);
-    expect(parseSearchString(":before 12:30")).toEqual({
-      datetimeBefore: datetime,
+    expect(parseSearchString(":before 12.12.2024")).toEqual({
+      dateBefore: new Date(Date.parse("12.12.2024")),
     });
   });
 
   it("should find mulitple search filters", () => {
     expect(
       parseSearchString(
-        " :from Graz :to Kaindorf  :participants user1@example.com,user2@example.com",
+        " :from Graz :to Kaindorf  :participants user1@example.com,user:2@example.com",
       ),
     ).toEqual({
       source: "Graz",
       destination: "Kaindorf",
-      participants: ["user1@example.com", "user2@example.com"],
+      participants: ["user1@example.com", "user:2@example.com"],
     });
 
     expect(parseSearchString(":driver me@example.com :to Kaindorf")).toEqual({
@@ -60,9 +58,7 @@ describe("recommendSearchFilters", () => {
   });
 
   it("should recommend filters", () => {
-    expect(recommendSearchFilters(":")).toEqual([
-      Object.values(SEARCH_FILTERS),
-    ]);
+    expect(recommendSearchFilters(":")).toEqual(Object.values(SEARCH_FILTERS));
     expect(recommendSearchFilters(":fr")).toEqual(["from"]);
     expect(recommendSearchFilters(":to")).toEqual(["to"]);
     expect(recommendSearchFilters(":dri")).toEqual(["driver"]);
