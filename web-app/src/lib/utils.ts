@@ -4,6 +4,7 @@ export const QUERY_KEYS = {
   rideItems: "ride-items",
   groupItems: "group-items",
   rideSingle: "ride-single",
+  groupSingle: "group-single",
 } as const;
 
 export const STYLES = {

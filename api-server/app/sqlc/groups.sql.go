@@ -37,6 +37,37 @@ func (q *Queries) GroupsCreate(ctx context.Context, arg GroupsCreateParams) (Rid
 	return i, err
 }
 
+const groupsGetById = `-- name: GroupsGetById :one
+SELECT
+    id,
+    name,
+    description,
+    created_by
+FROM
+    ride_groups
+WHERE
+    id = ?
+`
+
+type GroupsGetByIdRow struct {
+	ID          string         `json:"id"`
+	Name        string         `json:"name"`
+	Description sql.NullString `json:"description"`
+	CreatedBy   string         `json:"createdBy"`
+}
+
+func (q *Queries) GroupsGetById(ctx context.Context, id string) (GroupsGetByIdRow, error) {
+	row := q.db.QueryRowContext(ctx, groupsGetById, id)
+	var i GroupsGetByIdRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.CreatedBy,
+	)
+	return i, err
+}
+
 const groupsGetMany = `-- name: GroupsGetMany :many
 SELECT
     id,
@@ -86,4 +117,40 @@ func (q *Queries) GroupsGetMany(ctx context.Context, offset int64) ([]GroupsGetM
 		return nil, err
 	}
 	return items, nil
+}
+
+const groupsUpdateDescription = `-- name: GroupsUpdateDescription :exec
+UPDATE ride_groups
+SET
+    description = ?
+WHERE
+    id = ?
+`
+
+type GroupsUpdateDescriptionParams struct {
+	Description sql.NullString `json:"description"`
+	ID          string         `json:"id"`
+}
+
+func (q *Queries) GroupsUpdateDescription(ctx context.Context, arg GroupsUpdateDescriptionParams) error {
+	_, err := q.db.ExecContext(ctx, groupsUpdateDescription, arg.Description, arg.ID)
+	return err
+}
+
+const groupsUpdateName = `-- name: GroupsUpdateName :exec
+UPDATE ride_groups
+SET
+    name = ?
+WHERE
+    id = ?
+`
+
+type GroupsUpdateNameParams struct {
+	Name string `json:"name"`
+	ID   string `json:"id"`
+}
+
+func (q *Queries) GroupsUpdateName(ctx context.Context, arg GroupsUpdateNameParams) error {
+	_, err := q.db.ExecContext(ctx, groupsUpdateName, arg.Name, arg.ID)
+	return err
 }

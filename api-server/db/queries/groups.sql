@@ -22,3 +22,31 @@ LIMIT
     50
 OFFSET
     ?;
+
+
+-- name: GroupsGetById :one
+SELECT
+    id,
+    name,
+    description,
+    created_by
+FROM
+    ride_groups
+WHERE
+    id = ?;
+
+
+-- name: GroupsUpdateName :exec
+UPDATE ride_groups
+SET
+    name = ?
+WHERE
+    id = ?;
+
+
+-- name: GroupsUpdateDescription :exec
+UPDATE ride_groups
+SET
+    description = ?
+WHERE
+    id = ?;

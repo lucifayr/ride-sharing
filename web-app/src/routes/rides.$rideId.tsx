@@ -8,7 +8,7 @@ import { UserLoggedIn } from "../lib/models/user";
 import { displaySchedule } from "./dashboard";
 import { toast } from "react-toastify";
 import { parseRecuring } from "../lib/components/CreateRideForm";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 
 export const Route = createFileRoute("/rides/$rideId")({
   component: RouteComponent,
@@ -18,6 +18,7 @@ function RouteComponent() {
   const { user } = useUserStore();
   const { rideId } = Route.useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   if (user.type !== "logged-in") {
     navigate({ to: "/" });
@@ -44,7 +45,7 @@ function RideData({ user, rideId }: { user: UserLoggedIn; rideId: string }) {
     error,
     data: ride,
   } = useQuery({
-    queryKey: [QUERY_KEYS.rideSingle],
+    queryKey: [QUERY_KEYS.rideSingle, `ride-${rideId}`],
     queryFn: async () => {
       const res = await fetch(
         `${import.meta.env.VITE_API_URI}/rides/by-id/${rideId}`,

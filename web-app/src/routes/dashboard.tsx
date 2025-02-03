@@ -129,15 +129,17 @@ function GroupList({ tokens }: { tokens: AuthTokens }) {
     <div className="flex flex-col gap-8">
       {groups.map((group, idx) => {
         return (
-          <div
+          <Link
             key={idx}
             className="flex flex-col gap-2 text-wrap"
+            to="/groups/$groupId"
+            params={{ groupId: group.groupId }}
           >
             <span className="text-4xl">{group.name}</span>
             {group.description ? (
               <em className="text-lg">{group.description}</em>
             ) : null}
-          </div>
+          </Link>
         );
       })}
     </div>
@@ -414,10 +416,10 @@ function CreateGroupForm({
     },
   });
 
-  const form = useForm<CreateGroupFormData>({
+  const form = useForm({
     defaultValues: {
       name: "",
-      description: undefined,
+      description: undefined as string | undefined,
     },
     onSubmit: async ({ value }) => {
       await createGroup.mutateAsync({
