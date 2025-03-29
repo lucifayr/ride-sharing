@@ -193,6 +193,31 @@ func (q *Queries) GroupsMembersJoin(ctx context.Context, arg GroupsMembersJoinPa
 	return err
 }
 
+const groupsMembersLeave = `-- name: GroupsMembersLeave :exec
+DELETE FROM ride_group_members AS gm
+WHERE
+    gm.group_id = ?
+    AND gm.user_id = ?
+    AND NOT EXISTS (
+        SELECT
+            g.id
+        FROM
+            ride_groups g
+        WHERE
+            g.created_by = gm.user_id
+    )
+`
+
+type GroupsMembersLeaveParams struct {
+	GroupID string `json:"groupId"`
+	UserID  string `json:"userId"`
+}
+
+func (q *Queries) GroupsMembersLeave(ctx context.Context, arg GroupsMembersLeaveParams) error {
+	_, err := q.db.ExecContext(ctx, groupsMembersLeave, arg.GroupID, arg.UserID)
+	return err
+}
+
 const groupsMembersSetStatus = `-- name: GroupsMembersSetStatus :exec
 UPDATE ride_group_members
 SET

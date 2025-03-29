@@ -20,6 +20,7 @@ func groupHandlers(h *http.ServeMux) {
 	h.HandleFunc("GET /groups/many", handle(getManyGroups).with(bearerAuth(false)).build())
 	h.HandleFunc("GET /groups/by-id/{id}", handle(getGroupById).with(bearerAuth(false)).build())
 	h.HandleFunc("POST /groups/by-id/{id}/members/join", handle(groupMemberJoin).with(bearerAuth(false)).build())
+	h.HandleFunc("POST /groups/by-id/{id}/members/leave", handle(groupMemberLeave).with(bearerAuth(false)).build())
 	h.HandleFunc("POST /groups/by-id/{id}/members/ban", handle(groupMemberOwnerSetStatus("banned")).with(bearerAuth(false)).build())
 	h.HandleFunc("POST /groups/by-id/{id}/members/approve", handle(groupMemberOwnerSetStatus("member")).with(bearerAuth(false)).build())
 }
@@ -307,6 +308,36 @@ func groupMemberJoin(w http.ResponseWriter, r *http.Request) {
 		UserID:  user.ID,
 	}
 	err = state.queries.GroupsMembersJoin(r.Context(), argsJoin)
+	assert.Nil(err)
+}
+
+func groupMemberLeave(w http.ResponseWriter, r *http.Request) {
+	user := getMiddlewareData[sqlc.User](r, "user")
+
+	id := r.PathValue("id")
+	if id == "" {
+		httpWriteErr(w, http.StatusBadRequest, "Must provide 'id' path parameter.")
+		return
+	}
+
+	members, err := state.queries.GroupsMembersGet(r.Context(), id)
+	assert.Nil(err)
+
+	userIsMemberedMember := slices.ContainsFunc(members, func(m sqlc.GroupsMembersGetRow) bool {
+		return m.UserID == user.ID
+	})
+
+	if !userIsMemberedMember {
+		httpWriteErr(w, http.StatusConflict, "You are not a member of this group.")
+		return
+	}
+
+	argsJoin := sqlc.GroupsMembersLeaveParams {
+		GroupID: id,
+		UserID:  user.ID,
+	}
+
+	err = state.queries.GroupsMembersLeave(r.Context(), argsJoin)
 	assert.Nil(err)
 }
 

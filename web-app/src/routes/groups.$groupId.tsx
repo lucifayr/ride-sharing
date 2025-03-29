@@ -82,7 +82,7 @@ function GroupData({ groupId, user }: { groupId: string; user: UserLoggedIn }) {
   });
 
   const updateName = useMutation({
-    mutationKey: ["group-update-name"],
+    mutationKey: [`group-update-name-${groupId}`],
     onError: (err) => {
       console.error(err);
     },
@@ -119,7 +119,7 @@ function GroupData({ groupId, user }: { groupId: string; user: UserLoggedIn }) {
   });
 
   const updateDescription = useMutation({
-    mutationKey: ["group-update-description"],
+    mutationKey: [`group-update-description-${groupId}`],
     onError: (err) => {
       console.error(err);
     },
@@ -156,7 +156,7 @@ function GroupData({ groupId, user }: { groupId: string; user: UserLoggedIn }) {
   });
 
   const joinGroup = useMutation({
-    mutationKey: ["join-group"],
+    mutationKey: [`join-group-${groupId}`],
     onError: (err) => {
       console.error(err);
     },
@@ -194,8 +194,47 @@ function GroupData({ groupId, user }: { groupId: string; user: UserLoggedIn }) {
     },
   });
 
+  const leaveGroup = useMutation({
+    mutationKey: [`leave-group-${groupId}`],
+    onError: (err) => {
+      console.error(err);
+    },
+    mutationFn: async (groupId: string) => {
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URI}/groups/by-id/${groupId}/members/leave`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: user.tokens.accessToken,
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            userId: user.id,
+          }),
+        },
+      );
+
+      if (res.status === 401) {
+        setUser({ type: "logged-out" });
+      }
+
+      if (!res.ok) {
+        const data = await res.json();
+        if (isRestErr(data)) {
+          toastRestErr(data);
+          return;
+        }
+      }
+
+      queryClient.invalidateQueries({
+        queryKey: [QUERY_KEYS.groupSingle, `group-${groupId}`],
+      });
+      toast(`Left group ${group?.data?.name}`, { type: "info" });
+    },
+  });
+
   const groupApproveOrBanMember = useMutation({
-    mutationKey: ["group-member-approve-or-ban"],
+    mutationKey: [`group-member-approve-or-ban-${groupId}`],
     onError: (err) => {
       console.error(err);
     },
@@ -259,7 +298,7 @@ function GroupData({ groupId, user }: { groupId: string; user: UserLoggedIn }) {
 
   const g = group.data;
   const canEdit = g.createdBy === user.id;
-  const canJoin = !g.members.some((m) => m.userId === user.id);
+  const isMember = !g.members.some((m) => m.userId === user.id);
 
   return (
     <div className="flex aspect-video min-w-[480px] flex-col gap-4 rounded bg-neutral-200 p-4 text-xl shadow-lg dark:bg-neutral-800 dark:shadow-none">
@@ -268,7 +307,7 @@ function GroupData({ groupId, user }: { groupId: string; user: UserLoggedIn }) {
           Group &nbsp;
           {canEdit ? <em className="text-2xl font-normal">(owned)</em> : null}
         </h1>
-        {canJoin && (
+        {isMember ? (
           <button
             className={STYLES.button}
             disabled={joinGroup.isPending}
@@ -278,6 +317,18 @@ function GroupData({ groupId, user }: { groupId: string; user: UserLoggedIn }) {
           >
             {joinGroup.isPending ? <LoadingSpinner /> : <>Join</>}
           </button>
+        ) : (
+          group.data.createdBy !== user.id && (
+            <button
+              className={STYLES.buttonDanger}
+              disabled={leaveGroup.isPending}
+              onClick={() => {
+                leaveGroup.mutate(g.groupId);
+              }}
+            >
+              {leaveGroup.isPending ? <LoadingSpinner /> : <>Leave</>}
+            </button>
+          )
         )}
       </div>
 

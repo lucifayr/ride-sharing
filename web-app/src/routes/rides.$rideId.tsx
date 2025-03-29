@@ -209,7 +209,7 @@ function RideData({ user, rideId }: { user: UserLoggedIn; rideId: string }) {
   const canJoin = !r.participants.some((p) => p.userId === user.id);
 
   return (
-    <div className="flex aspect-video min-w-[320px] flex-col gap-4 rounded bg-neutral-200 p-4 text-xl shadow-lg dark:bg-neutral-800 dark:shadow-none">
+    <div className="flex aspect-video min-w-[420px] flex-col gap-4 rounded bg-neutral-200 p-4 text-xl shadow-lg dark:bg-neutral-800 dark:shadow-none">
       <div className="flex justify-between">
         <h1 className="mb-2 text-4xl font-bold">
           Ride &nbsp;

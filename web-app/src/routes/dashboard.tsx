@@ -4,7 +4,6 @@ import {
   createFileRoute,
   Link,
   ReactNode,
-  SearchFilter,
   useNavigate,
 } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -13,7 +12,7 @@ import editIcon from "../assets/edit.svg";
 import { STYLES, QUERY_KEYS, isRestErr, toastRestErr } from "../lib/utils";
 import { useUserStore } from "../lib/stores";
 import { LoadingSpinner } from "../lib/components/Spinner";
-import { AuthTokens } from "../lib/models/user";
+import { AuthTokens, UserLoggedIn } from "../lib/models/user";
 import { RideEvent, RideSchedule } from "../lib/models/ride";
 import { Group } from "../lib/models/models";
 import { useForm } from "@tanstack/react-form";
@@ -57,7 +56,7 @@ function Dashboard() {
         </div>
         <div className="flex h-full gap-8">
           <div className="flex-grow p-8">
-            <RideList tokens={user.tokens} />
+            <RideList user={user} />
           </div>
           <div className="h-full min-w-80 border-l-2 border-solid border-neutral-300 p-8 dark:border-neutral-600">
             <GroupList tokens={user.tokens} />
@@ -148,7 +147,8 @@ function GroupList({ tokens }: { tokens: AuthTokens }) {
   );
 }
 
-function RideList({ tokens }: { tokens: AuthTokens }) {
+function RideList({ user }: { user: UserLoggedIn }) {
+  const tokens = user.tokens;
   const inputRefRideSearch = useRef<HTMLInputElement>(null);
   const { setUser } = useUserStore();
 
@@ -250,22 +250,27 @@ function RideList({ tokens }: { tokens: AuthTokens }) {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <input
-        className="w-full border-b border-neutral-200 bg-transparent p-1 text-xl focus:border-cyan-500 focus:outline-none disabled:border-none dark:border-neutral-500"
-        placeholder=":from My cool city"
-        ref={inputRefRideSearch}
-        onKeyDown={(e) => {
-          if (e.key !== "Enter" || !inputRefRideSearch.current) {
-            return;
-          }
+    <div className="flex flex-col gap-8">
+      <div>
+        <span className="text-2xl font-semibold">Search Rides</span>
+        <input
+          className="w-full border-b border-neutral-200 bg-transparent p-1 text-xl focus:border-cyan-500 focus:outline-none disabled:border-none dark:border-neutral-500"
+          placeholder=":from My cool city"
+          type="text"
+          autoComplete="off"
+          ref={inputRefRideSearch}
+          onKeyDown={(e) => {
+            if (e.key !== "Enter" || !inputRefRideSearch.current) {
+              return;
+            }
 
-          const newFilters = parseSearchString(
-            inputRefRideSearch.current.value,
-          );
-          setFilters(newFilters);
-        }}
-      />
+            const newFilters = parseSearchString(
+              inputRefRideSearch.current.value,
+            );
+            setFilters(newFilters);
+          }}
+        />
+      </div>
       <table className="relative h-fit w-full max-w-full table-auto overflow-x-auto text-lg">
         <thead className="uppercase">
           <RideListRow
@@ -277,7 +282,7 @@ function RideList({ tokens }: { tokens: AuthTokens }) {
         </thead>
         <tbody>
           {rides
-            .filter((ride) => rideMatchesFilters(ride, filters))
+            .filter((ride) => rideMatchesFilters(ride, user, filters))
             .map((ride, idx) => {
               return (
                 <RideListRow
@@ -530,7 +535,11 @@ function CreateGroupForm({
   );
 }
 
-function rideMatchesFilters(ride: RideEvent, filters: SearchFilters): boolean {
+function rideMatchesFilters(
+  ride: RideEvent,
+  me: UserLoggedIn,
+  filters: SearchFilters,
+): boolean {
   if (filters.source !== undefined && ride.locationFrom !== filters.source) {
     return false;
   }
@@ -546,11 +555,17 @@ function rideMatchesFilters(ride: RideEvent, filters: SearchFilters): boolean {
     return false;
   }
 
-  if (filters.owner !== undefined && ride.createdByEmail !== filters.owner) {
+  if (
+    filters.owner !== undefined &&
+    aliasedEmail(me, ride.createdByEmail) !== aliasedEmail(me, filters.owner)
+  ) {
     return false;
   }
 
-  if (filters.driver !== undefined && ride.driverEmail !== filters.driver) {
+  if (
+    filters.driver !== undefined &&
+    aliasedEmail(me, ride.driverEmail) !== aliasedEmail(me, filters.driver)
+  ) {
     return false;
   }
 
@@ -567,7 +582,9 @@ function rideMatchesFilters(ride: RideEvent, filters: SearchFilters): boolean {
     filters.participants !== undefined &&
     !filters.participants.every((participant) => {
       const hasParticipant = ride.participants.some(
-        (rideParticipant) => rideParticipant.email === participant,
+        (rideParticipant) =>
+          aliasedEmail(me, rideParticipant.email) ===
+          aliasedEmail(me, participant),
       );
       return hasParticipant;
     })
@@ -576,4 +593,12 @@ function rideMatchesFilters(ride: RideEvent, filters: SearchFilters): boolean {
   }
 
   return true;
+}
+
+function aliasedEmail(me: UserLoggedIn, email: string): string {
+  if (email === "me") {
+    return me.email;
+  }
+
+  return email;
 }

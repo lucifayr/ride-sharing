@@ -81,6 +81,21 @@ VALUES
     (?, ?);
 
 
+-- name: GroupsMembersLeave :exec
+DELETE FROM ride_group_members AS gm
+WHERE
+    gm.group_id = ?
+    AND gm.user_id = ?
+    AND NOT EXISTS (
+        SELECT
+            g.id
+        FROM
+            ride_groups g
+        WHERE
+            g.created_by = gm.user_id
+    );
+
+
 -- name: GroupsMembersSetStatus :exec
 UPDATE ride_group_members
 SET

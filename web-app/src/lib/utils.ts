@@ -9,9 +9,11 @@ export const QUERY_KEYS = {
 
 export const STYLES = {
   button:
-    "text-white rounded min-w-[92px] bg-cyan-700 py-2 px-4 duration-150 hover:bg-cyan-600 font-bold",
+    "text-white rounded min-w-[92px] bg-cyan-700 py-2 px-4 duration-150 hover:bg-cyan-600 font-bold disabled:bg-cyan-900 disabled:text-neutral-500",
   buttonDanger:
     "text-white rounded min-w-[92px] bg-red-700 py-2 px-4 duration-150 hover:bg-red-800 font-bold",
+  input:
+    "w-full appearance-none rounded border-2 border-gray-200 bg-gray-200 px-4 py-2 leading-tight text-gray-700 focus:border-purple-500 focus:bg-white focus:outline-none",
 } as const;
 
 export type RestError = {
