@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CreateRideForm } from "../lib/components/CreateRideForm";
 import {
   createFileRoute,
@@ -14,7 +14,7 @@ import { useUserStore } from "../lib/stores";
 import { LoadingSpinner } from "../lib/components/Spinner";
 import { AuthTokens, UserLoggedIn } from "../lib/models/user";
 import { RideEvent, RideSchedule } from "../lib/models/ride";
-import { Group } from "../lib/models/models";
+import { Group, GroupMessage } from "../lib/models/models";
 import { useForm } from "@tanstack/react-form";
 import { parseSearchString, SearchFilters } from "../lib/search";
 
@@ -36,30 +36,28 @@ function Dashboard() {
   return (
     <div className="flex h-full gap-8">
       <div className="flex h-full w-full flex-col gap-2">
-        <div className="flex min-h-32 items-center justify-center gap-2">
-          <button
-            className={`text-2xl ${STYLES.button}`}
-            onClick={() => {
-              dialogRefRide.current?.showModal();
-            }}
-          >
-            Create a Ride
-          </button>
-          <button
-            className={`text-2xl ${STYLES.button}`}
-            onClick={() => {
-              dialogRefGroup.current?.showModal();
-            }}
-          >
-            Create a Group
-          </button>
-        </div>
         <div className="flex h-full gap-8">
-          <div className="flex-grow p-8">
+          <div className="flex flex-grow flex-col gap-8 p-8">
+            <button
+              className={`text-2xl ${STYLES.button} max-w-80`}
+              onClick={() => {
+                dialogRefRide.current?.showModal();
+              }}
+            >
+              Create a Ride
+            </button>
             <RideList user={user} />
           </div>
-          <div className="h-full min-w-80 border-l-2 border-solid border-neutral-300 p-8 dark:border-neutral-600">
-            <GroupList tokens={user.tokens} />
+          <div className="flex max-h-full min-w-[600px] flex-1 flex-col gap-8 overflow-y-auto border-l-2 border-solid border-neutral-300 p-4 dark:border-neutral-600">
+            <button
+              className={`text-2xl ${STYLES.button} w-96 max-w-96`}
+              onClick={() => {
+                dialogRefGroup.current?.showModal();
+              }}
+            >
+              Create a Group
+            </button>
+            <GroupCol user={user} />
           </div>
         </div>
         <dialog
@@ -82,8 +80,9 @@ function Dashboard() {
   );
 }
 
-function GroupList({ tokens }: { tokens: AuthTokens }) {
+function GroupCol({ user }: { user: UserLoggedIn }) {
   const { setUser } = useUserStore();
+  const [activeGroup, setActiveGroup] = useState<Group | undefined>(undefined);
 
   const {
     isPending,
@@ -95,7 +94,7 @@ function GroupList({ tokens }: { tokens: AuthTokens }) {
       const res = await fetch(`${import.meta.env.VITE_API_URI}/groups/many`, {
         method: "GET",
         headers: {
-          Authorization: tokens.accessToken,
+          Authorization: user.tokens.accessToken,
           Accept: "application/json",
         },
       });
@@ -127,22 +126,349 @@ function GroupList({ tokens }: { tokens: AuthTokens }) {
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      {groups.map((group, idx) => {
-        return (
-          <Link
-            key={idx}
-            className="flex flex-col gap-2 text-wrap"
-            to="/groups/$groupId"
-            params={{ groupId: group.groupId }}
-          >
-            <span className="text-4xl">{group.name}</span>
-            {group.description ? (
-              <em className="text-lg">{group.description}</em>
-            ) : null}
-          </Link>
-        );
-      })}
+    <div className="flex max-h-full flex-1 flex-grow flex-col gap-16 overflow-y-auto">
+      <SearchInput
+        items={groups}
+        entryMap={(group) => ({
+          value: group,
+          ordinal: `${group.name}${group.description ?? ""}`,
+          display: group.name,
+        })}
+        onConfirm={(group) => {
+          setActiveGroup(group);
+        }}
+        extraProps={{
+          inputField: { placeholder: "Choose a group..." },
+        }}
+      />
+      <GroupChat
+        group={activeGroup}
+        user={user}
+      />
+    </div>
+  );
+}
+
+const msgs = [
+  {
+    messageId: "1",
+    content: "first message",
+    sentBy: "NnCaPHQLC9",
+    sentByEmail: "test@example.com",
+    createdAt: "todo",
+  },
+  {
+    messageId: "2",
+    content: "second message",
+    sentBy: "NnCaPHQLC9",
+    sentByEmail: "test@example.com",
+    createdAt: "todo",
+  },
+  {
+    messageId: "3",
+    content: "reply to first message",
+    sentBy: "nmBSHcxyvn",
+    sentByEmail: "2@other.com",
+    createdAt: "todo",
+    repliesTo: "2",
+  },
+  {
+    messageId: "3",
+    content: "reply to first message",
+    sentBy: "nmBSHcxyvn",
+    sentByEmail: "2@other.com",
+    createdAt: "todo",
+    repliesTo: "2",
+  },
+  {
+    messageId: "3",
+    content: "reply to first message",
+    sentBy: "nmBSHcxyvn",
+    sentByEmail: "2@other.com",
+    createdAt: "todo",
+    repliesTo: "2",
+  },
+  {
+    messageId: "2",
+    content: "second message",
+    sentBy: "NnCaPHQLC9",
+    sentByEmail: "test@example.com",
+    createdAt: "todo",
+  },
+  {
+    messageId: "2",
+    content: "second message",
+    sentBy: "NnCaPHQLC9",
+    sentByEmail: "test@example.com",
+    createdAt: "todo",
+  },
+  {
+    messageId: "2",
+    content: "second message",
+    sentBy: "NnCaPHQLC9",
+    sentByEmail: "test@example.com",
+    createdAt: "todo",
+  },
+  {
+    messageId: "3",
+    content: "reply to first message",
+    sentBy: "nmBSHcxyvn",
+    sentByEmail: "2@other.com",
+    createdAt: "todo",
+    repliesTo: "2",
+  },
+  {
+    messageId: "3",
+    content: "reply to first message",
+    sentBy: "nmBSHcxyvn",
+    sentByEmail: "2@other.com",
+    createdAt: "todo",
+    repliesTo: "2",
+  },
+  {
+    messageId: "3",
+    content: "reply to first message",
+    sentBy: "nmBSHcxyvn",
+    sentByEmail: "2@other.com",
+    createdAt: "todo",
+    repliesTo: "2",
+  },
+  {
+    messageId: "3",
+    content: "reply to first message",
+    sentBy: "nmBSHcxyvn",
+    sentByEmail: "2@other.com",
+    createdAt: "todo",
+    repliesTo: "2",
+  },
+  {
+    messageId: "3",
+    content: "reply to first message",
+    sentBy: "nmBSHcxyvn",
+    sentByEmail: "2@other.com",
+    createdAt: "todo",
+    repliesTo: "2",
+  },
+  {
+    messageId: "3",
+    content: "reply to first message",
+    sentBy: "nmBSHcxyvn",
+    sentByEmail: "2@other.com",
+    createdAt: "todo",
+    repliesTo: "2",
+  },
+  {
+    messageId: "3",
+    content: "reply to first message",
+    sentBy: "nmBSHcxyvn",
+    sentByEmail: "2@other.com",
+    createdAt: "todo",
+    repliesTo: "2",
+  },
+  {
+    messageId: "3",
+    content: "reply to first message",
+    sentBy: "nmBSHcxyvn",
+    sentByEmail: "2@other.com",
+    createdAt: "todo",
+    repliesTo: "2",
+  },
+  {
+    messageId: "3",
+    content: "reply to first message",
+    sentBy: "nmBSHcxyvn",
+    sentByEmail: "2@other.com",
+    createdAt: "todo",
+    repliesTo: "2",
+  },
+] satisfies GroupMessage[];
+
+function GroupChat({ group, user }: { group?: Group; user: UserLoggedIn }) {
+  const msgContainer = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    msgContainer.current?.scrollTo({
+      behavior: "instant",
+      top: msgContainer.current.scrollHeight,
+    });
+  }, []);
+
+  if (group === undefined) {
+    return null;
+  }
+
+  return (
+    <div className="flex max-h-full flex-1 flex-grow flex-col gap-4 overflow-y-auto">
+      <span className="truncate text-wrap text-2xl">
+        Messages from{" "}
+        <Link
+          to="/groups/$groupId"
+          className="italic underline"
+          params={{ groupId: group.groupId }}
+        >
+          {group.name}
+        </Link>
+      </span>
+      <div
+        ref={msgContainer}
+        className="flex max-h-full flex-1 flex-grow flex-col gap-2 overflow-y-auto p-4"
+      >
+        {msgs.map((msg, idx) => {
+          return (
+            <div
+              key={idx}
+              className={`relative max-w-[80%] rounded-md p-2 ${
+                msg.sentBy === user.id
+                  ? "self-end border-b-4 border-l-4 border-cyan-900 bg-cyan-800"
+                  : "self-start border-b-4 border-r-4 border-neutral-400 bg-neutral-300 dark:border-neutral-800 dark:bg-neutral-700"
+              }`}
+            >
+              <div
+                className={`absolute top-[-12px] flex h-8 w-8 items-center justify-center rounded-full bg-neutral-400 dark:bg-neutral-800 ${
+                  msg.sentBy === user.id ? "left-[-24px]" : "right-[-24px]"
+                }`}
+              >
+                <span className="text-lg font-semibold">
+                  {msg.sentByEmail
+                    .toUpperCase()
+                    .substring(0, Math.min(2, msg.sentByEmail.indexOf("@")))}
+                </span>
+              </div>
+              <div>
+                {msg.repliesTo !== undefined && (
+                  <Reply
+                    msgs={msgs}
+                    reply={msg}
+                    user={user}
+                  />
+                )}
+                <span className="text-lg">{msg.content}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <input
+        className="w-full border-b border-neutral-200 bg-transparent p-1 text-xl focus:border-cyan-500 focus:outline-none disabled:border-none dark:border-neutral-500"
+        type="text"
+        autoComplete="off"
+        placeholder="Send a message..."
+      />
+    </div>
+  );
+}
+
+function Reply({
+  msgs,
+  reply,
+  user,
+}: {
+  msgs: GroupMessage[];
+  reply: GroupMessage;
+  user: UserLoggedIn;
+}) {
+  const originalMsg = msgs.find((msg) => msg.messageId === reply.repliesTo);
+  if (originalMsg === undefined) {
+    return;
+  }
+
+  return (
+    <div
+      className={`rounded border-neutral-100 p-2 dark:border-neutral-400 ${
+        reply.sentBy === user.id
+          ? "border-r-2 bg-cyan-900"
+          : "border-l-2 bg-neutral-400 dark:bg-neutral-800"
+      }`}
+    >
+      <span className="text-lg">{originalMsg.content}</span>
+    </div>
+  );
+}
+
+type SearchInputEntry<T> = { value: T; display: string; ordinal: string };
+
+// I am sorry
+function SearchInput<T>({
+  items,
+  entryMap,
+  onConfirm,
+  extraProps,
+}: {
+  items: T[];
+  entryMap: (item: T) => SearchInputEntry<T>;
+  onConfirm: (item: T | undefined) => void;
+  extraProps?: {
+    inputField?: React.InputHTMLAttributes<HTMLInputElement>;
+  };
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
+
+  const possibleItems = useMemo(() => {
+    return items.map(entryMap).filter((entry) => {
+      return entry.ordinal.toLowerCase().includes(search.toLowerCase());
+    });
+  }, [items, search]);
+
+  return (
+    <div
+      className="relative"
+      ref={containerRef}
+    >
+      <input
+        className="w-full border-b border-neutral-200 bg-transparent p-1 text-xl focus:border-cyan-500 focus:outline-none disabled:border-none dark:border-neutral-500"
+        type="text"
+        autoComplete="off"
+        value={search}
+        onFocus={() => {
+          setOpen(true);
+          setConfirmed(false);
+        }}
+        onBlur={(e) => {
+          setOpen(containerRef.current?.contains(e.relatedTarget) ?? false);
+        }}
+        onChange={(e) => {
+          setOpen(true);
+          setConfirmed(false);
+          setSearch(e.target.value);
+        }}
+        onKeyDown={(e) => {
+          if (e.key !== "Enter" || possibleItems.length !== 1) {
+            return;
+          }
+
+          setConfirmed(true);
+          setSearch(possibleItems[0].display);
+          onConfirm(possibleItems[0].value);
+        }}
+        {...extraProps?.inputField}
+      />
+      <div className="absolute flex w-full flex-col divide-y-[1px] divide-neutral-300 dark:divide-neutral-700">
+        {open && !confirmed
+          ? possibleItems
+              .sort((a, b) => {
+                return a.ordinal.localeCompare(b.ordinal);
+              })
+              .map((entry, idx) => {
+                return (
+                  <button
+                    key={idx}
+                    className="bg-neutral-200 p-2 text-left text-lg font-semibold duration-150 hover:bg-neutral-300 focus:bg-neutral-300 focus:outline-none dark:bg-neutral-800 hover:dark:bg-neutral-700 focus:dark:bg-neutral-700"
+                    onClick={() => {
+                      setConfirmed(true);
+                      setSearch(entry.display);
+                      onConfirm(entry.value);
+                    }}
+                  >
+                    <span>{entry.display}</span>
+                  </button>
+                );
+              })
+          : null}
+      </div>
     </div>
   );
 }
@@ -252,7 +578,7 @@ function RideList({ user }: { user: UserLoggedIn }) {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <span className="text-2xl font-semibold">Search Rides</span>
+        <span className="text-2xl font-semibold">Search for Rides</span>
         <input
           className="w-full border-b border-neutral-200 bg-transparent p-1 text-xl focus:border-cyan-500 focus:outline-none disabled:border-none dark:border-neutral-500"
           placeholder=":from My cool city"
