@@ -196,6 +196,7 @@ function GroupChat({ group, user }: { group?: Group; user: UserLoggedIn }) {
     },
     onSuccess: () => {
       setContent("");
+      setRepliesTo(undefined);
     },
     mutationFn: async ({ content }: { content: string }) => {
       if (!group) {
