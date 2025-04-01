@@ -1,9 +1,9 @@
 CREATE TABLE rides (
-    id TEXT PRIMARY KEY DEFAULT (lower(hex (randomblob (8)))),
+    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(8)))),
     location_from TEXT NOT NULL,
     location_to TEXT NOT NULL,
     tacking_place_at TEXT NOT NULL CHECK (
-        tacking_place_at = strftime ('%Y-%m-%dT%H:%M:%SZ', tacking_place_at)
+        tacking_place_at = strftime('%Y-%m-%dT%H:%M:%SZ', tacking_place_at)
     ),
     created_by TEXT NOT NULL,
     driver TEXT NOT NULL,

@@ -8,6 +8,15 @@ import (
 	"database/sql"
 )
 
+type GroupMessage struct {
+	ID        string         `json:"id"`
+	GroupID   string         `json:"groupId"`
+	Content   string         `json:"content"`
+	SentBy    string         `json:"sentBy"`
+	CreatedAt string         `json:"createdAt"`
+	RepliesTo sql.NullString `json:"repliesTo"`
+}
+
 type Ride struct {
 	ID             string `json:"id"`
 	LocationFrom   string `json:"locationFrom"`

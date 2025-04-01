@@ -81,7 +81,7 @@ var commands = Command{
 
 						tokens := rest.GenAuthTokens(id, email)
 
-						params := sqlc.UsersSetTokensParams{ID: id, AccessToken: utils.SqlNullStr(tokens.AccessToken), RefreshToken: utils.SqlNullStr(tokens.RefreshToken)}
+						params := sqlc.UsersSetTokensParams{ID: id, AccessToken: utils.SqlNullStrWrapped(tokens.AccessToken), RefreshToken: utils.SqlNullStrWrapped(tokens.RefreshToken)}
 						err = queries.UsersSetTokens(context.Background(), params)
 						assert.Nil(err)
 
@@ -146,7 +146,7 @@ func createMigration(flags map[string]any) {
 	// Replace ':' in date time string of format "2006-01-02 15:04:05"
 	prefix = strings.Replace(prefix, ":", "-", 2)
 
-	migName := *flags["name"].(*string)
+	migName := flags["name"].(string)
 	name := fmt.Sprintf("%s_%s", prefix, migName)
 
 	for _, suffix := range migrations.FileSuffixes() {

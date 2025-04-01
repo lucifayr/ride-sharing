@@ -13,6 +13,7 @@ export type GroupMemeber = {
 };
 
 export type GroupMessage = {
+  groupId: string;
   messageId: string;
   content: string;
   sentBy: string; // user id

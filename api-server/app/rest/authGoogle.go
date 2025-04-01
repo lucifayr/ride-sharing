@@ -123,7 +123,7 @@ func oauthCallbackGoogle(w http.ResponseWriter, r *http.Request) {
 
 	tokens := GenAuthTokens(user.ID, user.Email)
 
-	args := sqlc.UsersSetTokensParams{ID: user.ID, AccessToken: utils.SqlNullStr(tokens.AccessToken), RefreshToken: utils.SqlNullStr(tokens.RefreshToken)}
+	args := sqlc.UsersSetTokensParams{ID: user.ID, AccessToken: utils.SqlNullStrWrapped(tokens.AccessToken), RefreshToken: utils.SqlNullStrWrapped(tokens.RefreshToken)}
 	err = state.queries.UsersSetTokens(r.Context(), args)
 	if err != nil {
 		log.Println("Error: Failed to update user tokens.", err.Error(), "user id:", *profile.Id, "user email:", *profile.Email)

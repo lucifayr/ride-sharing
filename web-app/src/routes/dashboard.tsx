@@ -149,156 +149,93 @@ function GroupCol({ user }: { user: UserLoggedIn }) {
   );
 }
 
-const msgs = [
-  {
-    messageId: "1",
-    content: "first message",
-    sentBy: "NnCaPHQLC9",
-    sentByEmail: "test@example.com",
-    createdAt: "todo",
-  },
-  {
-    messageId: "2",
-    content: "second message",
-    sentBy: "NnCaPHQLC9",
-    sentByEmail: "test@example.com",
-    createdAt: "todo",
-  },
-  {
-    messageId: "3",
-    content: "reply to first message",
-    sentBy: "nmBSHcxyvn",
-    sentByEmail: "2@other.com",
-    createdAt: "todo",
-    repliesTo: "2",
-  },
-  {
-    messageId: "3",
-    content: "reply to first message",
-    sentBy: "nmBSHcxyvn",
-    sentByEmail: "2@other.com",
-    createdAt: "todo",
-    repliesTo: "2",
-  },
-  {
-    messageId: "3",
-    content: "reply to first message",
-    sentBy: "nmBSHcxyvn",
-    sentByEmail: "2@other.com",
-    createdAt: "todo",
-    repliesTo: "2",
-  },
-  {
-    messageId: "2",
-    content: "second message",
-    sentBy: "NnCaPHQLC9",
-    sentByEmail: "test@example.com",
-    createdAt: "todo",
-  },
-  {
-    messageId: "2",
-    content: "second message",
-    sentBy: "NnCaPHQLC9",
-    sentByEmail: "test@example.com",
-    createdAt: "todo",
-  },
-  {
-    messageId: "2",
-    content: "second message",
-    sentBy: "NnCaPHQLC9",
-    sentByEmail: "test@example.com",
-    createdAt: "todo",
-  },
-  {
-    messageId: "3",
-    content: "reply to first message",
-    sentBy: "nmBSHcxyvn",
-    sentByEmail: "2@other.com",
-    createdAt: "todo",
-    repliesTo: "2",
-  },
-  {
-    messageId: "3",
-    content: "reply to first message",
-    sentBy: "nmBSHcxyvn",
-    sentByEmail: "2@other.com",
-    createdAt: "todo",
-    repliesTo: "2",
-  },
-  {
-    messageId: "3",
-    content: "reply to first message",
-    sentBy: "nmBSHcxyvn",
-    sentByEmail: "2@other.com",
-    createdAt: "todo",
-    repliesTo: "2",
-  },
-  {
-    messageId: "3",
-    content: "reply to first message",
-    sentBy: "nmBSHcxyvn",
-    sentByEmail: "2@other.com",
-    createdAt: "todo",
-    repliesTo: "2",
-  },
-  {
-    messageId: "3",
-    content: "reply to first message",
-    sentBy: "nmBSHcxyvn",
-    sentByEmail: "2@other.com",
-    createdAt: "todo",
-    repliesTo: "2",
-  },
-  {
-    messageId: "3",
-    content: "reply to first message",
-    sentBy: "nmBSHcxyvn",
-    sentByEmail: "2@other.com",
-    createdAt: "todo",
-    repliesTo: "2",
-  },
-  {
-    messageId: "3",
-    content: "reply to first message",
-    sentBy: "nmBSHcxyvn",
-    sentByEmail: "2@other.com",
-    createdAt: "todo",
-    repliesTo: "2",
-  },
-  {
-    messageId: "3",
-    content: "reply to first message",
-    sentBy: "nmBSHcxyvn",
-    sentByEmail: "2@other.com",
-    createdAt: "todo",
-    repliesTo: "2",
-  },
-  {
-    messageId: "3",
-    content: "reply to first message",
-    sentBy: "nmBSHcxyvn",
-    sentByEmail: "2@other.com",
-    createdAt: "todo",
-    repliesTo: "2",
-  },
-] satisfies GroupMessage[];
-
 function GroupChat({ group, user }: { group?: Group; user: UserLoggedIn }) {
-  const msgContainer = useRef<HTMLDivElement>(null);
+  const { setUser } = useUserStore();
+  const ws = useRef<WebSocket | null>(null);
+
+  const msgContainerRef = useRef<HTMLDivElement>(null);
+  const sendMessageInputRef = useRef<HTMLInputElement>(null);
+  const [content, setContent] = useState<string>("");
+  const [repliesTo, setRepliesTo] = useState<GroupMessage | undefined>(
+    undefined,
+  );
+
+  const [msgs, setMsgs] = useState<GroupMessage[]>([]);
 
   useEffect(() => {
-    msgContainer.current?.scrollTo({
-      behavior: "instant",
-      top: msgContainer.current.scrollHeight,
-    });
-  }, []);
+    setMsgs([]);
+
+    if (ws.current) {
+      ws.current.close();
+    }
+
+    if (group !== undefined) {
+      ws.current = new WebSocket(
+        `${import.meta.env.VITE_API_URI}/groups/messages/${group?.groupId}`,
+      );
+
+      ws.current.onmessage = (m) => {
+        const msg = JSON.parse(m.data);
+        setMsgs((msgs) => [...msgs, msg]);
+      };
+    }
+  }, [group]);
+
+  useEffect(() => {
+    if (!msgContainerRef.current) {
+      return;
+    }
+
+    msgContainerRef.current.scrollTop = msgContainerRef.current.scrollHeight;
+  }, [msgs]);
+
+  const sendMessage = useMutation({
+    mutationKey: ["send-message"],
+    onError: (err) => {
+      console.error(err);
+    },
+    onSuccess: () => {
+      setContent("");
+    },
+    mutationFn: async ({ content }: { content: string }) => {
+      if (!group) {
+        return;
+      }
+
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URI}/groups/by-id/${group.groupId}/send-message`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: user.tokens.accessToken,
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            groupId: group.groupId,
+            content,
+            repliesTo: repliesTo?.messageId,
+          }),
+        },
+      );
+
+      if (res.status === 401) {
+        setUser({ type: "logged-out" });
+      }
+
+      const data = await res.json();
+      if (isRestErr(data)) {
+        toastRestErr(data);
+        throw new Error("Failed to send message.");
+      }
+    },
+  });
 
   if (group === undefined) {
     return null;
   }
 
   return (
-    <div className="flex max-h-full flex-1 flex-grow flex-col gap-4 overflow-y-auto">
+    <div className="flex max-h-full flex-1 flex-grow flex-col gap-4 overflow-y-auto break-words">
       <span className="truncate text-wrap text-2xl">
         Messages from{" "}
         <Link
@@ -310,17 +247,20 @@ function GroupChat({ group, user }: { group?: Group; user: UserLoggedIn }) {
         </Link>
       </span>
       <div
-        ref={msgContainer}
-        className="flex max-h-full flex-1 flex-grow flex-col gap-2 overflow-y-auto p-4"
+        ref={msgContainerRef}
+        className="flex max-h-full flex-1 flex-grow flex-col gap-8 overflow-y-auto p-4"
       >
         {msgs.map((msg, idx) => {
           return (
             <div
               key={idx}
+              onClick={() => {
+                setRepliesTo(msg);
+              }}
               className={`relative max-w-[80%] rounded-md p-2 ${
                 msg.sentBy === user.id
-                  ? "self-end border-b-4 border-l-4 border-cyan-900 bg-cyan-800"
-                  : "self-start border-b-4 border-r-4 border-neutral-400 bg-neutral-300 dark:border-neutral-800 dark:bg-neutral-700"
+                  ? "self-end border-b-4 border-l-4 border-cyan-700 bg-cyan-600"
+                  : "self-start border-b-4 border-r-4 border-neutral-400 bg-neutral-300 dark:border-neutral-800 dark:bg-neutral-600"
               }`}
             >
               <div
@@ -348,11 +288,38 @@ function GroupChat({ group, user }: { group?: Group; user: UserLoggedIn }) {
           );
         })}
       </div>
+      {repliesTo !== undefined ? (
+        <div className="flex flex-col text-wrap rounded-md bg-neutral-300 p-2 text-lg dark:bg-neutral-700">
+          <span>Replying to:</span>
+          <span className="border-l-4 border-neutral-400 pl-4 dark:border-neutral-500">
+            {repliesTo.content}
+          </span>
+          <span>Sent by {repliesTo.sentByEmail}</span>
+        </div>
+      ) : null}
       <input
         className="w-full border-b border-neutral-200 bg-transparent p-1 text-xl focus:border-cyan-500 focus:outline-none disabled:border-none dark:border-neutral-500"
         type="text"
         autoComplete="off"
         placeholder="Send a message..."
+        disabled={sendMessage.isPending}
+        value={content}
+        ref={sendMessageInputRef}
+        onChange={(e) => {
+          setContent(e.target.value);
+        }}
+        onKeyDown={(e) => {
+          if (
+            e.key !== "Enter" ||
+            sendMessageInputRef.current?.disabled ||
+            content === undefined ||
+            content.length === 0
+          ) {
+            return;
+          }
+
+          sendMessage.mutate({ content });
+        }}
       />
     </div>
   );
@@ -376,7 +343,7 @@ function Reply({
     <div
       className={`rounded border-neutral-100 p-2 dark:border-neutral-400 ${
         reply.sentBy === user.id
-          ? "border-r-2 bg-cyan-900"
+          ? "border-r-2 bg-cyan-700"
           : "border-l-2 bg-neutral-400 dark:bg-neutral-800"
       }`}
     >

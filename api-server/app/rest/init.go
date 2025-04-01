@@ -43,6 +43,7 @@ func NewRESTApi(db *sql.DB) http.Handler {
 	userHandlers(mux)
 	rideHandlers(mux)
 	groupHandlers(mux)
+	groupMessageHandlers(mux)
 
 	return WithCors(mux)
 }

@@ -173,7 +173,7 @@ func updateGroup(w http.ResponseWriter, r *http.Request) {
 
 	if updateParams.Description != nil {
 		argsUpdateDescription := sqlc.GroupsUpdateDescriptionParams{
-			Description: utils.SqlNullStr(*updateParams.Description),
+			Description: utils.SqlNullStrWrapped(*updateParams.Description),
 			ID:          *updateParams.GroupId,
 		}
 

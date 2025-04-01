@@ -79,7 +79,7 @@ func refreshAuthTokens(w http.ResponseWriter, r *http.Request) {
 	bytes, err := json.Marshal(tokens)
 	assert.True(err == nil, "Failed to serialize authentication tokens.", tokens, "error:", func() any { return err })
 
-	args := sqlc.UsersSetTokensParams{ID: user.ID, AccessToken: utils.SqlNullStr(tokens.AccessToken), RefreshToken: utils.SqlNullStr(tokens.RefreshToken)}
+	args := sqlc.UsersSetTokensParams{ID: user.ID, AccessToken: utils.SqlNullStrWrapped(tokens.AccessToken), RefreshToken: utils.SqlNullStrWrapped(tokens.RefreshToken)}
 	err = state.queries.UsersSetTokens(r.Context(), args)
 	if err != nil {
 		log.Println("Failed to update authentication tokens.", "error:", err)

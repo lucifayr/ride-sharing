@@ -1,0 +1,10 @@
+SELECT
+    id,
+    content,
+    sent_by,
+    created_at,
+    replies_to
+FROM
+    group_messages
+LIMIT
+    1;
