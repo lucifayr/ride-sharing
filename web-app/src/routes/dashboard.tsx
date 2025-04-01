@@ -269,11 +269,15 @@ function GroupChat({ group, user }: { group?: Group; user: UserLoggedIn }) {
                   msg.sentBy === user.id ? "left-[-24px]" : "right-[-24px]"
                 }`}
               >
-                <span className="text-lg font-semibold">
+                <Link
+                  to="/user/$userId"
+                  params={{ userId: msg.sentBy }}
+                  className="text-lg font-semibold"
+                >
                   {msg.sentByEmail
                     .toUpperCase()
                     .substring(0, Math.min(2, msg.sentByEmail.indexOf("@")))}
-                </span>
+                </Link>
               </div>
               <div>
                 {msg.repliesTo !== undefined && (

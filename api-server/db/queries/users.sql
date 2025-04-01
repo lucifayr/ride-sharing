@@ -33,3 +33,11 @@ SET
     refresh_token = ?
 WHERE
     id = ?;
+
+
+-- name: UsersSetBlocked :exec
+UPDATE users
+SET
+    is_blocked = ?
+WHERE
+    id = ?;

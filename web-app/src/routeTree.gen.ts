@@ -14,6 +14,7 @@ import { Route as rootRoute } from './routes/__root'
 import { Route as DashboardImport } from './routes/dashboard'
 import { Route as AuthenticateImport } from './routes/authenticate'
 import { Route as IndexImport } from './routes/index'
+import { Route as UserUserIdImport } from './routes/user.$userId'
 import { Route as RidesRideIdImport } from './routes/rides.$rideId'
 import { Route as GroupsGroupIdImport } from './routes/groups.$groupId'
 
@@ -34,6 +35,12 @@ const AuthenticateRoute = AuthenticateImport.update({
 const IndexRoute = IndexImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const UserUserIdRoute = UserUserIdImport.update({
+  id: '/user/$userId',
+  path: '/user/$userId',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -88,6 +95,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RidesRideIdImport
       parentRoute: typeof rootRoute
     }
+    '/user/$userId': {
+      id: '/user/$userId'
+      path: '/user/$userId'
+      fullPath: '/user/$userId'
+      preLoaderRoute: typeof UserUserIdImport
+      parentRoute: typeof rootRoute
+    }
   }
 }
 
@@ -99,6 +113,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/groups/$groupId': typeof GroupsGroupIdRoute
   '/rides/$rideId': typeof RidesRideIdRoute
+  '/user/$userId': typeof UserUserIdRoute
 }
 
 export interface FileRoutesByTo {
@@ -107,6 +122,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/groups/$groupId': typeof GroupsGroupIdRoute
   '/rides/$rideId': typeof RidesRideIdRoute
+  '/user/$userId': typeof UserUserIdRoute
 }
 
 export interface FileRoutesById {
@@ -116,6 +132,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/groups/$groupId': typeof GroupsGroupIdRoute
   '/rides/$rideId': typeof RidesRideIdRoute
+  '/user/$userId': typeof UserUserIdRoute
 }
 
 export interface FileRouteTypes {
@@ -126,6 +143,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/groups/$groupId'
     | '/rides/$rideId'
+    | '/user/$userId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -133,6 +151,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/groups/$groupId'
     | '/rides/$rideId'
+    | '/user/$userId'
   id:
     | '__root__'
     | '/'
@@ -140,6 +159,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/groups/$groupId'
     | '/rides/$rideId'
+    | '/user/$userId'
   fileRoutesById: FileRoutesById
 }
 
@@ -149,6 +169,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   GroupsGroupIdRoute: typeof GroupsGroupIdRoute
   RidesRideIdRoute: typeof RidesRideIdRoute
+  UserUserIdRoute: typeof UserUserIdRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
@@ -157,6 +178,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   GroupsGroupIdRoute: GroupsGroupIdRoute,
   RidesRideIdRoute: RidesRideIdRoute,
+  UserUserIdRoute: UserUserIdRoute,
 }
 
 export const routeTree = rootRoute
@@ -173,7 +195,8 @@ export const routeTree = rootRoute
         "/authenticate",
         "/dashboard",
         "/groups/$groupId",
-        "/rides/$rideId"
+        "/rides/$rideId",
+        "/user/$userId"
       ]
     },
     "/": {
@@ -190,6 +213,9 @@ export const routeTree = rootRoute
     },
     "/rides/$rideId": {
       "filePath": "rides.$rideId.tsx"
+    },
+    "/user/$userId": {
+      "filePath": "user.$userId.tsx"
     }
   }
 }

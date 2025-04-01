@@ -14,7 +14,7 @@ const usersCreate = `-- name: UsersCreate :one
 INSERT INTO
     users (id, name, email, provider)
 VALUES
-    (?, ?, ?, ?) RETURNING id, name, email, provider, access_token, refresh_token
+    (?, ?, ?, ?) RETURNING id, name, email, provider, access_token, refresh_token, is_admin, is_blocked
 `
 
 type UsersCreateParams struct {
@@ -41,13 +41,15 @@ func (q *Queries) UsersCreate(ctx context.Context, arg UsersCreateParams) (User,
 		&i.Provider,
 		&i.AccessToken,
 		&i.RefreshToken,
+		&i.IsAdmin,
+		&i.IsBlocked,
 	)
 	return i, err
 }
 
 const usersGetById = `-- name: UsersGetById :one
 SELECT
-    id, name, email, provider, access_token, refresh_token
+    id, name, email, provider, access_token, refresh_token, is_admin, is_blocked
 FROM
     users
 WHERE
@@ -64,8 +66,28 @@ func (q *Queries) UsersGetById(ctx context.Context, id string) (User, error) {
 		&i.Provider,
 		&i.AccessToken,
 		&i.RefreshToken,
+		&i.IsAdmin,
+		&i.IsBlocked,
 	)
 	return i, err
+}
+
+const usersSetBlocked = `-- name: UsersSetBlocked :exec
+UPDATE users
+SET
+    is_blocked = ?
+WHERE
+    id = ?
+`
+
+type UsersSetBlockedParams struct {
+	IsBlocked bool   `json:"isBlocked"`
+	ID        string `json:"id"`
+}
+
+func (q *Queries) UsersSetBlocked(ctx context.Context, arg UsersSetBlockedParams) error {
+	_, err := q.db.ExecContext(ctx, usersSetBlocked, arg.IsBlocked, arg.ID)
+	return err
 }
 
 const usersSetTokens = `-- name: UsersSetTokens :exec
@@ -94,7 +116,7 @@ SET
     name = ?,
     email = ?
 WHERE
-    id = ? RETURNING id, name, email, provider, access_token, refresh_token
+    id = ? RETURNING id, name, email, provider, access_token, refresh_token, is_admin, is_blocked
 `
 
 type UsersUpdateNameAndEmailParams struct {
@@ -113,6 +135,8 @@ func (q *Queries) UsersUpdateNameAndEmail(ctx context.Context, arg UsersUpdateNa
 		&i.Provider,
 		&i.AccessToken,
 		&i.RefreshToken,
+		&i.IsAdmin,
+		&i.IsBlocked,
 	)
 	return i, err
 }

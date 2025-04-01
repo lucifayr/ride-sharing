@@ -5,6 +5,8 @@ export type UserLoggedIn = {
   id: string;
   name: string;
   email: string;
+  isAdmin: boolean;
+  isBlocked: boolean;
   tokens: AuthTokens;
 };
 

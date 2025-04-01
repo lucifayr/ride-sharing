@@ -99,6 +99,11 @@ func bearerAuth(ignoreExpired bool) func(w http.ResponseWriter, r *http.Request)
 			return true, nil
 		}
 
+		if user.IsBlocked {
+			http.Error(w, "User is blocked", http.StatusUnauthorized)
+			return true, nil
+		}
+
 		if !user.AccessToken.Valid || user.AccessToken.String != token {
 			http.Error(w, "Invalid access token in 'Authorization' header.", http.StatusUnauthorized)
 			return true, nil

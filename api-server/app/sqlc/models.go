@@ -86,4 +86,6 @@ type User struct {
 	Provider     string         `json:"provider"`
 	AccessToken  sql.NullString `json:"accessToken"`
 	RefreshToken sql.NullString `json:"refreshToken"`
+	IsAdmin      bool           `json:"isAdmin"`
+	IsBlocked    bool           `json:"isBlocked"`
 }

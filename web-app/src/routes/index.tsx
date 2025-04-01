@@ -112,6 +112,8 @@ function useLoginAsUser() {
         email: loggedInUser.email,
         name: loggedInUser.name,
         tokens: user.tokens,
+        isAdmin: loggedInUser.isAdmin,
+        isBlocked: loggedInUser.isBlocked,
       });
     },
   });
