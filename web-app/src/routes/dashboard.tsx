@@ -17,6 +17,7 @@ import { RideEvent, RideSchedule } from "../lib/models/ride";
 import { Group, GroupMessage } from "../lib/models/models";
 import { useForm } from "@tanstack/react-form";
 import { parseSearchString, SearchFilters } from "../lib/search";
+import { SearchInput } from "../lib/components/SearchInput";
 
 export const Route = createFileRoute("/dashboard")({
   component: Dashboard,
@@ -255,19 +256,14 @@ function GroupChat({ group, user }: { group?: Group; user: UserLoggedIn }) {
           return (
             <div
               key={idx}
-              onClick={() => {
-                setRepliesTo(msg);
-              }}
-              className={`relative max-w-[80%] rounded-md p-2 ${
-                msg.sentBy === user.id
-                  ? "self-end border-b-4 border-l-4 border-cyan-700 bg-cyan-600"
-                  : "self-start border-b-4 border-r-4 border-neutral-400 bg-neutral-300 dark:border-neutral-800 dark:bg-neutral-600"
-              }`}
+              className={`relative max-w-[80%] rounded-md p-2 ${msg.sentBy === user.id
+                ? "self-end border-b-4 border-l-4 border-cyan-900 bg-cyan-800"
+                : "self-start border-b-4 border-r-4 border-neutral-400 bg-neutral-300 dark:border-neutral-800 dark:bg-neutral-700"
+                }`}
             >
               <div
-                className={`absolute top-[-12px] flex h-8 w-8 items-center justify-center rounded-full bg-neutral-400 dark:bg-neutral-800 ${
-                  msg.sentBy === user.id ? "left-[-24px]" : "right-[-24px]"
-                }`}
+                className={`absolute top-[-12px] flex h-8 w-8 items-center justify-center rounded-full bg-neutral-400 dark:bg-neutral-800 ${msg.sentBy === user.id ? "left-[-24px]" : "right-[-24px]"
+                  }`}
               >
                 <Link
                   to="/user/$userId"
@@ -346,101 +342,12 @@ function Reply({
 
   return (
     <div
-      className={`rounded border-neutral-100 p-2 dark:border-neutral-400 ${
-        reply.sentBy === user.id
-          ? "border-r-2 bg-cyan-700"
-          : "border-l-2 bg-neutral-400 dark:bg-neutral-800"
-      }`}
+      className={`rounded border-neutral-100 p-2 dark:border-neutral-400 ${reply.sentBy === user.id
+        ? "border-r-2 bg-cyan-900"
+        : "border-l-2 bg-neutral-400 dark:bg-neutral-800"
+        }`}
     >
       <span className="text-lg">{originalMsg.content}</span>
-    </div>
-  );
-}
-
-type SearchInputEntry<T> = { value: T; display: string; ordinal: string };
-
-// I am sorry
-function SearchInput<T>({
-  items,
-  entryMap,
-  onConfirm,
-  extraProps,
-}: {
-  items: T[];
-  entryMap: (item: T) => SearchInputEntry<T>;
-  onConfirm: (item: T | undefined) => void;
-  extraProps?: {
-    inputField?: React.InputHTMLAttributes<HTMLInputElement>;
-  };
-}) {
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  const [search, setSearch] = useState("");
-  const [open, setOpen] = useState(false);
-  const [confirmed, setConfirmed] = useState(false);
-
-  const possibleItems = useMemo(() => {
-    return items.map(entryMap).filter((entry) => {
-      return entry.ordinal.toLowerCase().includes(search.toLowerCase());
-    });
-  }, [items, search]);
-
-  return (
-    <div
-      className="relative"
-      ref={containerRef}
-    >
-      <input
-        className="w-full border-b border-neutral-200 bg-transparent p-1 text-xl focus:border-cyan-500 focus:outline-none disabled:border-none dark:border-neutral-500"
-        type="text"
-        autoComplete="off"
-        value={search}
-        onFocus={() => {
-          setOpen(true);
-          setConfirmed(false);
-        }}
-        onBlur={(e) => {
-          setOpen(containerRef.current?.contains(e.relatedTarget) ?? false);
-        }}
-        onChange={(e) => {
-          setOpen(true);
-          setConfirmed(false);
-          setSearch(e.target.value);
-        }}
-        onKeyDown={(e) => {
-          if (e.key !== "Enter" || possibleItems.length !== 1) {
-            return;
-          }
-
-          setConfirmed(true);
-          setSearch(possibleItems[0].display);
-          onConfirm(possibleItems[0].value);
-        }}
-        {...extraProps?.inputField}
-      />
-      <div className="absolute flex w-full flex-col divide-y-[1px] divide-neutral-300 dark:divide-neutral-700">
-        {open && !confirmed
-          ? possibleItems
-              .sort((a, b) => {
-                return a.ordinal.localeCompare(b.ordinal);
-              })
-              .map((entry, idx) => {
-                return (
-                  <button
-                    key={idx}
-                    className="bg-neutral-200 p-2 text-left text-lg font-semibold duration-150 hover:bg-neutral-300 focus:bg-neutral-300 focus:outline-none dark:bg-neutral-800 hover:dark:bg-neutral-700 focus:dark:bg-neutral-700"
-                    onClick={() => {
-                      setConfirmed(true);
-                      setSearch(entry.display);
-                      onConfirm(entry.value);
-                    }}
-                  >
-                    <span>{entry.display}</span>
-                  </button>
-                );
-              })
-          : null}
-      </div>
     </div>
   );
 }

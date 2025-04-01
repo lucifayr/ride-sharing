@@ -21,3 +21,11 @@ export type GroupMessage = {
   createdAt: string;
   repliesTo?: string;
 };
+
+export type DefaultValues = {
+  locationFrom: string,
+  locationTo: string,
+  tackingPlaceAt: string,
+  transportLimit: string,
+  recurs: string
+}
